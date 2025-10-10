@@ -1,2 +1,5 @@
 qrcode
 hijri-converter
+pytesseract
+pillow
+

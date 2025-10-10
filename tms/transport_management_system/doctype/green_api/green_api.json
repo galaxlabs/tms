@@ -1,0 +1,103 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-10-10 23:25:04.182296",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "api_url",
+  "id_instance",
+  "webhook_url",
+  "enable_ocr",
+  "auto_create_trip",
+  "column_break_irbe",
+  "media_url",
+  "api_token",
+  "language",
+  "whatsapp_number",
+  "instance_status"
+ ],
+ "fields": [
+  {
+   "fieldname": "api_url",
+   "fieldtype": "Data",
+   "label": "API Url"
+  },
+  {
+   "fieldname": "media_url",
+   "fieldtype": "Data",
+   "label": "Media Url"
+  },
+  {
+   "fieldname": "id_instance",
+   "fieldtype": "Data",
+   "label": "ID Instance"
+  },
+  {
+   "fieldname": "api_token",
+   "fieldtype": "Password",
+   "label": "API Token"
+  },
+  {
+   "fieldname": "webhook_url",
+   "fieldtype": "Data",
+   "label": "Webhook Url"
+  },
+  {
+   "fieldname": "language",
+   "fieldtype": "Data",
+   "label": "Language"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_ocr",
+   "fieldtype": "Check",
+   "label": "Enable OCR"
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_create_trip",
+   "fieldtype": "Check",
+   "label": "Auto Create Trip"
+  },
+  {
+   "fieldname": "column_break_irbe",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "whatsapp_number",
+   "fieldtype": "Data",
+   "label": "WhatsApp Number"
+  },
+  {
+   "fieldname": "instance_status",
+   "fieldtype": "Data",
+   "label": "Instance Status"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-10-10 23:40:39.594674",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "Green API",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
