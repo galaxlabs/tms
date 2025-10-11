@@ -34,7 +34,7 @@
   "referral_commission_type",
   "referral_commission_value",
   "section_break_dhla",
-  "passngers"
+  "passengers"
  ],
  "fields": [
   {
@@ -200,9 +200,9 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "passngers",
+   "fieldname": "passengers",
    "fieldtype": "Table",
-   "label": "Passngers",
+   "label": "Passengers",
    "options": "Passengers"
   }
  ],
@@ -210,7 +210,7 @@
  "has_web_view": 1,
  "image_field": "qr_code",
  "links": [],
- "modified": "2025-10-11 07:05:40.782593",
+ "modified": "2025-10-11 07:11:09.384751",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "Trip",
