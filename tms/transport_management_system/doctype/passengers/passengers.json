@@ -27,10 +27,9 @@
   },
   {
    "fieldname": "nationality",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Nationality",
-   "options": "Country"
+   "label": "Nationality"
   },
   {
    "fieldname": "contact_no",
@@ -48,7 +47,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-09-02 22:39:14.996001",
+ "modified": "2025-10-13 05:23:03.490229",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "Passengers",
