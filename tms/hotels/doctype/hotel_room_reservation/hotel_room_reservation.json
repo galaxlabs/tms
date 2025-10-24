@@ -1,0 +1,90 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:HTL-RES-.YYYY.-.#####",
+ "creation": "2025-10-24 21:28:35.660523",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "guest_name",
+  "from_date",
+  "status",
+  "column_break_ogak",
+  "customer",
+  "to_date",
+  "section_break_fndk",
+  "table_kgil"
+ ],
+ "fields": [
+  {
+   "fieldname": "guest_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Guest Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From Date"
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Booked\nAdvance Paid\nInvoiced\nPaid\nCompleted\nCancelled"
+  },
+  {
+   "fieldname": "column_break_ogak",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_fndk",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "table_kgil",
+   "fieldtype": "Table",
+   "options": "Hotel Room Reservation Item"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-10-24 21:49:30.864060",
+ "modified_by": "Administrator",
+ "module": "Hotels",
+ "name": "Hotel Room Reservation",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,69 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{floor}-{capacity}",
+ "creation": "2025-10-24 19:57:18.985350",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "capacity",
+  "extra_bed_capacity",
+  "floor",
+  "section_break_rfyf",
+  "table_jtao"
+ ],
+ "fields": [
+  {
+   "fieldname": "capacity",
+   "fieldtype": "Int",
+   "label": "Capacity"
+  },
+  {
+   "fieldname": "extra_bed_capacity",
+   "fieldtype": "Int",
+   "label": "Extra Bed Capacity"
+  },
+  {
+   "fieldname": "section_break_rfyf",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "table_jtao",
+   "fieldtype": "Table",
+   "options": "Hotel Room Amenity"
+  },
+  {
+   "fieldname": "floor",
+   "fieldtype": "Data",
+   "label": "Floor"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-10-24 22:21:02.680774",
+ "modified_by": "Administrator",
+ "module": "Hotels",
+ "name": "Hotel Room Type",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
