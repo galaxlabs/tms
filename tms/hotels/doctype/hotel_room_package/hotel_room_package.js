@@ -3,6 +3,7 @@
 
 // Copyright (c) 2017, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
+// /home/xg/xg-b/apps/tms/tms/hotels/doctype/hotel_room_package/hotel_room_package.js
 
 frappe.ui.form.on('Hotel Room Package', {
 	hotel_room_type: function(frm) {

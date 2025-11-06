@@ -3,7 +3,7 @@
 
 // Copyright (c) 2017, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
-
+// /home/xg/xg-b/apps/tms/tms/hotels/doctype/hotel_room_reservation/hotel_room_reservation.js
 frappe.ui.form.on('Hotel Room Reservation', {
 	refresh: function(frm) {
 		if(frm.doc.docstatus == 1){
