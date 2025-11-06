@@ -245,3 +245,10 @@ app_license = "mit"
 override_whitelisted_methods = {
     "tms.api.greenapi_webhook.webhook": "tms.api.greenapi_webhook.webhook"
 }
+scheduler_events = {
+	"cron": {
+		"0 6 1 * *": [
+			"hotels.api.auto_generate_rent_invoices"
+		]
+	}
+	}

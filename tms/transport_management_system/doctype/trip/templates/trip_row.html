@@ -1,4 +1,7 @@
 <div>
-	<a href="{{ doc.route }}">{{ doc.title or doc.name }}</a>
-</div>
-<!-- this is a sample default list template -->
+	<a href="{{ doc.route }}">{{ doc.uuid }}</a>
+this is a sample default list template
+</div> 
+	<h4>Trip QR Code:</h4>
+		<img src="{{ qr_code_image }}" style="max-width: 200px;">
+	{% endif %}

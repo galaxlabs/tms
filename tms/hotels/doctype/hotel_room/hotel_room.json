@@ -2,14 +2,20 @@
  "actions": [],
  "allow_import": 1,
  "allow_rename": 1,
- "autoname": "field:hotel_room_type",
+ "autoname": "format:{building}{floor_no}{room_number}",
  "creation": "2025-10-24 19:50:34.377599",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "basic_info_section",
   "hotel_room_type",
-  "extra_bed_capacity"
+  "room_number",
+  "monthly_base_rent",
+  "floor_no",
+  "column_break_jqoz",
+  "extra_bed_capacity",
+  "building",
+  "status"
  ],
  "fields": [
   {
@@ -29,16 +35,50 @@
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Extra Bed Capacity"
+  },
+  {
+   "fieldname": "room_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Room Number",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "building",
+   "fieldtype": "Link",
+   "label": "Building",
+   "options": "Building"
+  },
+  {
+   "fieldname": "monthly_base_rent",
+   "fieldtype": "Currency",
+   "label": "Monthly Base Rent"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Vacant\nOccupied\nMaintenance"
+  },
+  {
+   "fieldname": "column_break_jqoz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "floor_no",
+   "fieldtype": "Int",
+   "label": "Floor No"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-24 20:54:39.776972",
+ "modified": "2025-10-25 00:34:52.587013",
  "modified_by": "Administrator",
  "module": "Hotels",
  "name": "Hotel Room",
- "naming_rule": "By fieldname",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

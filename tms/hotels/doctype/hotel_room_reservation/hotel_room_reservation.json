@@ -17,13 +17,6 @@
  ],
  "fields": [
   {
-   "fieldname": "guest_name",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Guest Name",
-   "reqd": 1
-  },
-  {
    "fieldname": "customer",
    "fieldtype": "Link",
    "label": "Customer",
@@ -43,7 +36,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Booked\nAdvance Paid\nInvoiced\nPaid\nCompleted\nCancelled"
+   "options": "Booked\nVacant\nOccupied\nMaintenance\nAdvance Paid\nInvoiced\nPaid\nCompleted\nCancelled"
   },
   {
    "fieldname": "column_break_ogak",
@@ -57,12 +50,19 @@
    "fieldname": "table_kgil",
    "fieldtype": "Table",
    "options": "Hotel Room Reservation Item"
+  },
+  {
+   "fieldname": "guest_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Guest Name",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-24 21:49:30.864060",
+ "modified": "2025-10-25 00:18:32.009585",
  "modified_by": "Administrator",
  "module": "Hotels",
  "name": "Hotel Room Reservation",
