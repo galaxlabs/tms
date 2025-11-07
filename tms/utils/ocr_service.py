@@ -1,87 +1,86 @@
-# tms/utils/ocr_service.py
 import frappe
-from pathlib import Path
-from typing import Tuple, Optional
-import base64
-import json
+import pytesseract
+import requests
+from PIL import Image, ImageEnhance, ImageFilter
+import os
 
-# Import your existing and new OCR utilities
-from tms.utils.openai_ocr_utils import extract_text_openai  # Your existing function
-from tms.utils.deepseek_ocr_utils import extract_text_deepseek  # To be created
-from tms.utils.parser import parse_passenger_details
-from google.cloud import vision  # For Google Vision
+# Import our intelligent extractor
+from .field_extractor import SmartFieldExtractor
 
-class OCRService:
-    def __init__(self):
-        # Define available engines in priority order
-        self.engines = [
-            ("deepseek", self._deepseek_ocr),
-            ("google_vision", self._google_vision_ocr),
-        ]
+def extract_text_unified(image_path, use_openai=False, openai_key=None):
+    """
+    Unified OCR service with self-learning intelligence
+    """
+    # Initialize intelligent extractor
+    extractor = SmartFieldExtractor()
     
-    def extract_text(self, file_path: str, preferred_engine: str = None) -> Tuple[str, str]:
-        """
-        Extract text using multiple OCR engines with fallback.
-        Returns: (extracted_text, engine_used)
-        """
-        file_path = self._resolve_file_path(file_path)
+    # First try Tesseract with multiple language support
+    try:
+        image = Image.open(image_path)
+        if image.mode != 'L':
+            image = image.convert('L')
         
-        # Try preferred engine first if specified
-        if preferred_engine:
-            for engine_name, engine_func in self.engines:
-                if engine_name == preferred_engine:
-                    try:
-                        text = engine_func(file_path)
-                        if self._is_valid_text(text):
-                            return text, engine_name
-                    except Exception as e:
-                        frappe.logger().warning(f"[OCR] {preferred_engine} failed: {e}")
-                        break  # Break and proceed to fallback
+        # Enhanced preprocessing for better international document OCR
+        enhancer = ImageEnhance.Contrast(image)
+        image = enhancer.enhance(2.0)
+        enhancer = ImageEnhance.Sharpness(image)
+        image = enhancer.enhance(2.0)
+        image = image.filter(ImageFilter.MedianFilter())
         
-        # Try all engines in order as fallback
-        for engine_name, engine_func in self.engines:
-            try:
-                frappe.logger().info(f"[OCR] Trying {engine_name}...")
-                text = engine_func(file_path)
-                if self._is_valid_text(text):
-                    frappe.logger().info(f"[OCR] Success with {engine_name}")
-                    return text, engine_name
-            except Exception as e:
-                frappe.logger().warning(f"[OCR] {engine_name} failed: {e}")
-                continue
+        # OCR with multiple languages for international documents
+        custom_config = r'--oem 3 --psm 6 -c preserve_interword_spaces=1'
+        text = pytesseract.image_to_string(image, lang='eng+ara+urd', config=custom_config)
         
-        raise Exception("All OCR engines failed")
+        if text and len(text.strip()) > 10:
+            # Use intelligent field extraction
+            extracted_data = extractor.extract_fields(text)
+            
+            return {
+                'text': text,
+                'engine': 'tesseract',
+                'structured_data': True,
+                'passenger_data': extracted_data
+            }
+    except Exception as e:
+        frappe.log_error(f"Tesseract failed: {str(e)}")
     
-    def _deepseek_ocr(self, file_path: str) -> str:
-        """Extract text using DeepSeek-OCR"""
-        return extract_text_deepseek(file_path)
-    
-    def _google_vision_ocr(self, file_path: str) -> str:
-        """Extract text using Google Vision API"""
-        client = vision.ImageAnnotatorClient()
-        with open(file_path, "rb") as image_file:
-            content = image_file.read()
-        image = vision.Image(content=content)
-        response = client.text_detection(image=image)
+    # Fallback to OCR.space for difficult documents
+    try:
+        api_key = 'helloworld'  # Free key
+        url = 'https://api.ocr.space/parse/image'
         
-        if response.text_annotations:
-            return response.text_annotations[0].description
-        return ""
+        with open(image_path, 'rb') as f:
+            file_data = f.read()
+        
+        payload = {
+            'apikey': api_key, 
+            'language': 'eng',
+            'OCREngine': 2,
+            'isOverlayRequired': False
+        }
+        files = {'file': ('document.jpg', file_data, 'image/jpeg')}
+        
+        response = requests.post(url, files=files, data=payload, timeout=30)
+        result = response.json()
+        
+        if result.get('ParsedResults'):
+            text = result['ParsedResults'][0].get('ParsedText', '')
+            if text:
+                # Use intelligent field extraction
+                extracted_data = extractor.extract_fields(text)
+                
+                return {
+                    'text': text,
+                    'engine': 'ocrspace',
+                    'structured_data': True,
+                    'passenger_data': extracted_data
+                }
+    except Exception as e:
+        frappe.log_error(f"OCR.space failed: {str(e)}")
     
-    def _resolve_file_path(self, file_url: str) -> str:
-        """Convert file URL to absolute path"""
-        if file_url.startswith('/private/files/'):
-            return frappe.get_site_path('private', 'files', Path(file_url).name)
-        elif file_url.startswith('/files/'):
-            return frappe.get_site_path('public', 'files', Path(file_url).name)
-        else:
-            return frappe.get_site_path(file_url.lstrip('/'))
-    
-    def _is_valid_text(self, text: str) -> bool:
-        """Check if extracted text is meaningful for government IDs"""
-        if not text or len(text.strip()) < 10:
-            return False
-        # Check for common ID/passport indicators
-        id_indicators = ['name', 'passport', 'id', 'nationality', 'date', 'birth', 'issu', 'expir']
-        text_lower = text.lower()
-        return any(indicator in text_lower for indicator in id_indicators)
+    return {
+        'text': '',
+        'engine': 'none',
+        'structured_data': False,
+        'passenger_data': {}
+    }

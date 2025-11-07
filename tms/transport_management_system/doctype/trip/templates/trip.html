@@ -18,10 +18,10 @@
   <div class="header-section" style="padding: 20px; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center;">
     <!-- Logo Left  -->
     <div class="logo-container" style="flex: 0 0 auto;">
-      {% set _logo = frappe.db.get_value('Company', staff_company_name, 'company_logo') %}
-      {% if _logo %}
-        <img src="{{ _logo }}" alt="Company Logo" style="height: 80px;">
-      {% endif %}
+        {% set company_logo = frappe.db.get_value('Company', staff_company_name, 'company_logo') %}
+        {% if company_logo %}
+          <img src="{{ company_logo | abs_url }}" alt="Company Logo" style="height:80px;">
+        {% endif %}      
     </div>
     <!-- Company Info Right -->
     <div class="company-info" style="flex: 1; text-align: right;">
@@ -140,9 +140,10 @@
   <div class="header-section" style="padding: 20px; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center;">
     <!-- Logo Left  -->
     <div class="logo-container" style="flex: 0 0 auto;">
-      {% if _logo %}
-        <img src="{{ _logo }}" alt="Company Logo" style="height: 80px;">
-      {% endif %}
+      {% set company_logo = frappe.db.get_value('Company', staff_company_name, 'company_logo') %}
+        {% if company_logo %}
+          <img src="{{ company_logo | abs_url }}" alt="Company Logo" style="height:80px;">
+        {% endif %}
     </div>
     <!-- Company Info Right -->
     <div class="company-info" style="flex: 1; text-align: right;">
