@@ -10,7 +10,8 @@
   "idpassport_no",
   "nationality",
   "contact_no",
-  "documents"
+  "documents",
+  "ocr_confidence"
  ],
  "fields": [
   {
@@ -41,13 +42,21 @@
    "fieldname": "documents",
    "fieldtype": "Attach",
    "label": "Documents"
+  },
+  {
+   "fieldname": "ocr_confidence",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "OCR Confidence",
+   "read_only": 1,
+   "width": "80"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-10-13 05:23:03.490229",
+ "modified": "2025-11-07 21:11:53.334067",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "Passengers",

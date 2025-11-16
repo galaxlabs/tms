@@ -17,6 +17,7 @@
   "trip_value",
   "driver_share",
   "trip_status",
+  "mobile_no",
   "column_break_rklb",
   "assigned_vehicle",
   "date",
@@ -198,13 +199,19 @@
    "fieldtype": "Table",
    "label": "Passengers",
    "options": "Passengers"
+  },
+  {
+   "fetch_from": "driver.mobile_no",
+   "fieldname": "mobile_no",
+   "fieldtype": "Data",
+   "label": "Mobile No"
   }
  ],
  "grid_page_length": 50,
  "has_web_view": 1,
  "image_field": "qr_code",
  "links": [],
- "modified": "2025-11-06 13:29:02.414775",
+ "modified": "2025-11-15 20:54:44.252268",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "Trip",

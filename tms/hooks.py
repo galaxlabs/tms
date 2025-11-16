@@ -252,3 +252,50 @@ scheduler_events = {
 		]
 	}
 	}
+
+import frappe
+
+def on_file_after_insert(doc, method=None):
+    """Auto-process files when attached to Trip"""
+    if doc.attached_to_doctype == "Trip" and doc.attached_to_name:
+        # Check if this is an image file
+        if doc.file_type and doc.file_type.startswith('image'):
+            frappe.logger().info(f"Auto-processing image attachment for Trip {doc.attached_to_name}")
+            
+            # Delay processing to ensure file is saved
+            frappe.enqueue(
+                process_trip_attachment,
+                doc=doc,
+                queue='short',
+                timeout=300,
+                now=False
+            )
+
+def process_trip_attachment(doc):
+    """Process attachment in background"""
+    try:
+        trip = frappe.get_doc("Trip", doc.attached_to_name)
+        
+        # Only auto-process if there are fewer than 10 passengers
+        if len(trip.passengers) < 10:
+            result = trip.add_passenger_from_ocr(doc.file_url)
+            
+            if result.get("success"):
+                frappe.logger().info(f"Auto OCR successful for {doc.file_url}: {result.get('passenger_added')}")
+                
+                frappe.publish_realtime(
+                    'ocr_processed', 
+                    {
+                        'trip': trip.name,
+                        'file': doc.file_url,
+                        'passenger_added': result.get('passenger_added'),
+                        'passengers_count': len(trip.passengers),
+                        'confidence': result.get('confidence', 0)
+                    },
+                    user=frappe.session.user
+                )
+            else:
+                frappe.logger().warning(f"Auto OCR failed for {doc.file_url}: {result.get('message')}")
+                
+    except Exception as e:
+        frappe.log_error(f"Auto OCR failed for {doc.file_url}: {e}")
