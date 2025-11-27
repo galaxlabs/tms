@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestGreenAPI(FrappeTestCase):
+class Testrecords(FrappeTestCase):
 	pass

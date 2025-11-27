@@ -1,7 +1,7 @@
 // Copyright (c) 2025, Galaxy Labs and contributors
 // For license information, please see license.txt
 
-// frappe.ui.form.on("Green API", {
+// frappe.ui.form.on("records", {
 // 	refresh(frm) {
 
 // 	},

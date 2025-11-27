@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class GreenAPI(Document):
+class WhatsAppSettings(Document):
 	pass

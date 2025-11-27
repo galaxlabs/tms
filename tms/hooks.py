@@ -242,60 +242,36 @@ app_license = "mit"
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
-override_whitelisted_methods = {
-    "tms.api.greenapi_webhook.webhook": "tms.api.greenapi_webhook.webhook"
-}
 scheduler_events = {
 	"cron": {
 		"0 6 1 * *": [
-			"hotels.api.auto_generate_rent_invoices"
+			"tms.hotels.api.auto_generate_rent_invoices"
 		]
 	}
 	}
 
-import frappe
+# No extra hook needed unless you want before_request/after_request hooks.
 
-def on_file_after_insert(doc, method=None):
-    """Auto-process files when attached to Trip"""
-    if doc.attached_to_doctype == "Trip" and doc.attached_to_name:
-        # Check if this is an image file
-        if doc.file_type and doc.file_type.startswith('image'):
-            frappe.logger().info(f"Auto-processing image attachment for Trip {doc.attached_to_name}")
-            
-            # Delay processing to ensure file is saved
-            frappe.enqueue(
-                process_trip_attachment,
-                doc=doc,
-                queue='short',
-                timeout=300,
-                now=False
-            )
+doc_events = {
+    # WhatsApp Message handler from official Frappe WhatsApp app
+    "WhatsApp Message": {
+        "after_insert": "tms.transport_management_system.whatsapp_bot.process_whatsapp_message"
+    },
 
-def process_trip_attachment(doc):
-    """Process attachment in background"""
-    try:
-        trip = frappe.get_doc("Trip", doc.attached_to_name)
-        
-        # Only auto-process if there are fewer than 10 passengers
-        if len(trip.passengers) < 10:
-            result = trip.add_passenger_from_ocr(doc.file_url)
-            
-            if result.get("success"):
-                frappe.logger().info(f"Auto OCR successful for {doc.file_url}: {result.get('passenger_added')}")
-                
-                frappe.publish_realtime(
-                    'ocr_processed', 
-                    {
-                        'trip': trip.name,
-                        'file': doc.file_url,
-                        'passenger_added': result.get('passenger_added'),
-                        'passengers_count': len(trip.passengers),
-                        'confidence': result.get('confidence', 0)
-                    },
-                    user=frappe.session.user
-                )
-            else:
-                frappe.logger().warning(f"Auto OCR failed for {doc.file_url}: {result.get('message')}")
-                
-    except Exception as e:
-        frappe.log_error(f"Auto OCR failed for {doc.file_url}: {e}")
+    # Your generic WhatsApp Notification dispatcher (as you already have)
+    "*": {
+        "before_insert": "tms.utils.run_server_script_for_doc_event",
+        "after_insert": "tms.utils.run_server_script_for_doc_event",
+        "before_validate": "tms.utils.run_server_script_for_doc_event",
+        "validate": "tms.utils.run_server_script_for_doc_event",
+        "on_update": "tms.utils.run_server_script_for_doc_event",
+        "before_submit": "tms.utils.run_server_script_for_doc_event",
+        "on_submit": "tms.utils.run_server_script_for_doc_event",
+        "before_cancel": "tms.utils.run_server_script_for_doc_event",
+        "on_cancel": "tms.utils.run_server_script_for_doc_event",
+        "on_trash": "tms.utils.run_server_script_for_doc_event",
+        "after_delete": "tms.utils.run_server_script_for_doc_event",
+        "before_update_after_submit": "tms.utils.run_server_script_for_doc_event",
+        "on_update_after_submit": "tms.utils.run_server_script_for_doc_event",
+    },
+}
