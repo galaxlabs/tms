@@ -8,6 +8,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "kashf_sent",
+  "section_break_dvfs",
   "driver",
   "trip_route",
   "from_location",
@@ -24,6 +26,7 @@
   "hijri_date",
   "uuid",
   "arrival",
+  "avg_speed_kmph",
   "route",
   "co_driver",
   "qr_code",
@@ -204,14 +207,33 @@
    "fetch_from": "driver.mobile_no",
    "fieldname": "mobile_no",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Mobile No"
+  },
+  {
+   "default": "Imran Khan",
+   "fieldname": "kashf_sent",
+   "fieldtype": "Check",
+   "label": "Kashf Sent?",
+   "search_index": 1
+  },
+  {
+   "fieldname": "section_break_dvfs",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fetch_from": "trip_route.avg_speed_kmph",
+   "fieldname": "avg_speed_kmph",
+   "fieldtype": "Float",
+   "hidden": 1,
+   "label": "Avg Speed (km/h)"
   }
  ],
  "grid_page_length": 50,
  "has_web_view": 1,
  "image_field": "qr_code",
  "links": [],
- "modified": "2025-11-15 20:54:44.252268",
+ "modified": "2025-11-29 21:25:15.187771",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "Trip",

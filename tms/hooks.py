@@ -147,7 +147,36 @@ app_license = "mit"
 
 # Scheduled Tasks
 # ---------------
-
+scheduler_events = {
+    "all": [
+        "tms.utils.trigger_whatsapp_notifications_all"
+    ],
+    "hourly": [
+        "tms.utils.trigger_whatsapp_notifications_hourly"
+    ],
+    "hourly_long": [
+        "tms.utils.trigger_whatsapp_notifications_hourly_long"
+    ],
+    "daily": [
+        "tms.utils.trigger_whatsapp_notifications_daily",
+        "tms.transport_management_system.doctype.whatsapp_notification.whatsapp_notification.trigger_notifications",
+    ],
+    "daily_long": [
+        "tms.utils.trigger_whatsapp_notifications_daily_long",
+    ],
+    "weekly": [
+        "tms.utils.trigger_whatsapp_notifications_weekly",
+    ],
+    "weekly_long": [
+        "tms.utils.trigger_whatsapp_notifications_weekly_long",
+    ],
+    "monthly": [
+        "tms.utils.trigger_whatsapp_notifications_monthly",
+    ],
+    "monthly_long": [
+        "tms.utils.trigger_whatsapp_notifications_monthly_long",
+    ],
+}
 # scheduler_events = {
 # 	"all": [
 # 		"tms.tasks.all"
@@ -248,17 +277,9 @@ scheduler_events = {
 			"tms.hotels.api.auto_generate_rent_invoices"
 		]
 	}
+
 	}
-
-# No extra hook needed unless you want before_request/after_request hooks.
-
 doc_events = {
-    # WhatsApp Message handler from official Frappe WhatsApp app
-    "WhatsApp Message": {
-        "after_insert": "tms.transport_management_system.whatsapp_bot.process_whatsapp_message"
-    },
-
-    # Your generic WhatsApp Notification dispatcher (as you already have)
     "*": {
         "before_insert": "tms.utils.run_server_script_for_doc_event",
         "after_insert": "tms.utils.run_server_script_for_doc_event",
@@ -273,5 +294,9 @@ doc_events = {
         "after_delete": "tms.utils.run_server_script_for_doc_event",
         "before_update_after_submit": "tms.utils.run_server_script_for_doc_event",
         "on_update_after_submit": "tms.utils.run_server_script_for_doc_event",
+    },
+
+    "WhatsApp Message": {
+        "after_insert": "tms.utils.whatsapp_bot.handle_incoming_whatsapp",
     },
 }

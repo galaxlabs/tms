@@ -1,3 +1,4 @@
+# /home/xg/xg-b/apps/tms/tms/utils/openai_ocr_utils.py
 import frappe
 from openai import OpenAI
 from pathlib import Path

@@ -1,0 +1,74 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-29 13:20:23.238009",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "button_type",
+  "button_label",
+  "phone_number",
+  "website_url",
+  "url_type",
+  "example_url"
+ ],
+ "fields": [
+  {
+   "fieldname": "button_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Button Type",
+   "options": "Quick Reply\nCall Phone\nVisit Website"
+  },
+  {
+   "fieldname": "button_label",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Button Label",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.button_type == \"Call Phone\"",
+   "fieldname": "phone_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Phone Number",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.button_type == \"Visit Website\"",
+   "fieldname": "website_url",
+   "fieldtype": "Data",
+   "label": "Website URL"
+  },
+  {
+   "depends_on": "eval:doc.button_type == \"Visit Website\"",
+   "fieldname": "url_type",
+   "fieldtype": "Select",
+   "label": "URL Type",
+   "options": "Static\nDynamic"
+  },
+  {
+   "depends_on": "eval:doc.button_type == \"Visit Website\"",
+   "fieldname": "example_url",
+   "fieldtype": "Data",
+   "label": "Example URL"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-11-29 13:32:13.583913",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "WhatsApp Button",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

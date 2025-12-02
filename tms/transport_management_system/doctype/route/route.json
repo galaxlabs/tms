@@ -6,11 +6,12 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "from_city",
-  "distance",
-  "column_break_ntsd",
   "to_city",
-  "duration"
+  "from_city",
+  "column_break_ntsd",
+  "distance",
+  "duration",
+  "avg_speed_kmph"
  ],
  "fields": [
   {
@@ -20,7 +21,7 @@
   },
   {
    "fieldname": "distance",
-   "fieldtype": "Int",
+   "fieldtype": "Float",
    "label": "Distance"
   },
   {
@@ -36,12 +37,17 @@
    "fieldname": "duration",
    "fieldtype": "Data",
    "label": "Duration"
+  },
+  {
+   "fieldname": "avg_speed_kmph",
+   "fieldtype": "Float",
+   "label": "Avg Speed (km/h)\""
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-13 04:22:24.968340",
+ "modified": "2025-11-29 20:44:08.771906",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "Route",

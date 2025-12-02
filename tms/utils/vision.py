@@ -1,43 +1,60 @@
 # tms/utils/vision.py
 
+import json
 import frappe
+from tms.utils.ocr_utils import extract_text_from_file
+from tms.utils.parser import parse_passenger_details
 
 
-def extract_passenger_from_image(file_doc):
+def extract_passenger_from_image(file_doc, waba_msg=None, trip=None):
     """
-    Convert an image (File doc) into structured passenger data.
-
-    Expected return format:
-    {
-        "passenger_name": "Muhammad Ali",
-        "idpassport_no": "AB1234567",
-        "nationality": "PAK",
-        "contact_no": "+9665xxxxxxx",
-        "ocr_confidence": 92.5
-    }
-
-    Implement this using your existing OCR / AI logic.
+    Convert an image (File doc) into structured passenger data AND
+    create an OCR History record.
     """
-    file_path = file_doc.get_full_path()
 
-    # TODO: Plug in your real OCR/AI logic using file_path or bytes
-    # Example pattern (pseudo):
-    #
-    # with open(file_path, "rb") as f:
-    #     img_bytes = f.read()
-    #
-    # result = call_your_ocr_api(img_bytes)
-    # parsed = parse_result_to_passenger_dict(result)
-    #
-    # return parsed
+    file_url = file_doc.file_url
 
-    # Temporary dummy result for testing the flow:
-    parsed = {
-        "passenger_name": "Demo Passenger",
-        "idpassport_no": "P123456789",
-        "nationality": "PAK",
+    # 1) OCR (Tesseract) → raw + fixed
+    raw_text, fixed_text = extract_text_from_file(file_url)
+
+    # 2) Parse structured fields
+    parsed = parse_passenger_details(raw_text, fixed_text)
+    full_name = parsed.get("name")
+    id_no = parsed.get("id_no")
+    nationality = parsed.get("nationality")
+
+    # 3) Build return payload
+    result = {
+        "passenger_name": full_name,
+        "idpassport_no": id_no,
+        "nationality": nationality,
         "contact_no": None,
-        "ocr_confidence": 90,
+        "ocr_confidence": 0,  # you can enhance later
     }
 
-    return parsed
+    # 4) Create OCR History row
+    try:
+        ocr_doc = frappe.get_doc({
+            "doctype": "OCR History",
+            "source": "WABA Image" if waba_msg else "Trip Attachment",
+            "ocr_engine": "Tesseract",
+            "confidence": 0,
+            "reference_doctype": "Trip" if trip else None,
+            "reference_name": trip.name if trip else None,
+            "waba_message": waba_msg.name if waba_msg else None,
+            "trip": trip.name if trip else None,
+            "file": file_doc.name,
+            # if you later store media_hash in WABA message, add here:
+            "media_hash": getattr(waba_msg, "media_hash", None) if waba_msg else None,
+            "raw_text": raw_text,
+            "fixed_text": fixed_text,
+            "full_name": full_name,
+            "nationality": nationality,
+            "id_no": id_no,
+            "json_data": json.dumps(parsed, ensure_ascii=False),
+        })
+        ocr_doc.insert(ignore_permissions=True)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "[TMS OCR] Failed to save OCR History")
+
+    return result

@@ -7,9 +7,10 @@ import frappe
 import uuid
 import qrcode
 import base64
+import re  
 from io import BytesIO
 from frappe.website.website_generator import WebsiteGenerator
-from frappe.utils import getdate, get_url
+from frappe.utils import getdate, get_url, add_to_date, flt, cint  # 👈 extend this line
 from hijri_converter import Gregorian
 
 class Trip(WebsiteGenerator):
@@ -35,7 +36,70 @@ class Trip(WebsiteGenerator):
             public_url = f"{base_url.rstrip('/')}/{self.route.lstrip('/')}"
             self.qr_code = self.generate_qr_code(public_url)
             self.db_set("qr_code", self.qr_code)
+    
+    def validate(self):
+            # keep any other validate logic here later
+            self.set_estimated_arrival()
+    
+    def set_estimated_arrival(self):
+        """
+        Use trip.duration (string) to calculate trip.arrival from trip.departure.
+        """
+        if not (self.departure and self.duration):
+            return
 
+        minutes = self._duration_to_minutes(self.duration)
+        if not minutes:
+            return
+
+        self.arrival = add_to_date(self.departure, minutes=minutes, as_datetime=True)
+
+    def _duration_to_minutes(self, duration):
+        """
+        Supported examples for duration:
+        - '4:30'
+        - '4 hours 30 mins'
+        - '4 hr 30 min'
+        - '4h 30m'
+        - '4.5'  (treated as hours)
+        - '4'    (treated as hours)
+        """
+        if not duration:
+            return 0
+
+        s = str(duration).strip().lower()
+
+        # Case 1: HH:MM format
+        if ":" in s:
+            parts = s.split(":")
+            hours = cint(parts[0] or 0)
+            mins = cint(parts[1] or 0) if len(parts) > 1 else 0
+            return hours * 60 + mins
+
+        # Case 2: 'X hours Y mins', 'X hr Y min', 'Xh Ym', etc.
+        hours = 0
+        mins = 0
+
+        m = re.search(r"(\d+)\s*(hour|hours|hr|hrs|h)", s)
+        if m:
+            hours = cint(m.group(1))
+
+        m = re.search(r"(\d+)\s*(minute|minutes|min|mins|m)", s)
+        if m:
+            mins = cint(m.group(1))
+
+        if hours or mins:
+            return hours * 60 + mins
+
+        # Case 3: pure number -> treat as hours
+        val = flt(s)
+        if val:
+            return int(round(val * 60))
+
+        return 0
+
+        # Build public URL from site config (respects https and domain)
+ 
     def generate_qr_code(self, data: str) -> str:
         qr = qrcode.QRCode(version=1, box_size=10, border=2)
         qr.add_data(data)
