@@ -2,6 +2,9 @@
 
 {% block page_content %}
 
+{% set phone_no = frappe.db.get_value("Company", staff_company_name, "phone_no") or "" %}
+{% set reg_no = frappe.db.get_value("Company", staff_company_name, "registration_details") or "" %}
+
 <style>
   /* printable page break */
   @media print { .page-break { page-break-before: always; } }
@@ -11,6 +14,30 @@
     line-height: 2; font-size: 14px;
   }
   .agreement-heading { font-size: 22px; font-weight: 700; }
+  .footer-line {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: hsl(0, 0%, 27%);
+    border-top: 1px solid #ccc; padding-top: 5px; margin-top: 20px;
+  }
+  .footer-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: hsl(0, 0%, 27%);
+    margin-top: 10px;
+  }
+  .footer-line .ar {
+    direction: rtl;
+    text-align: right;
+    flex: 1;
+  }
+  .footer-line .en {
+    direction: ltr;
+    text-align: left;
+    flex: 1;
+  }
+
 </style>
 
 <!-- ========== PAGE 1: Trip Details ========== -->
@@ -192,10 +219,9 @@
   <hr>
 
   <!-- Optional footer info from Company Docs/Phone -->
-  <div style="font-size:12px; color:#444; margin-top: 10px;">
 
-    CR: {{ cr_no }} | Reg: {{ reg_no }} | Phone: {{ phone_no }}
+  <div class="footer-line">
+    <div class="ar">الهاتف: {{ phone_no }} | رقم التسجيل: {{ reg_no }}</div>
+    <div class="en"> Phone: {{ phone_no }} | Reg: {{ reg_no }}</div>
   </div>
-</div>
-
 {% endblock %}

@@ -13,7 +13,8 @@
   "current_trip",
   "expected_passengers",
   "received_images",
-  "bot_state"
+  "bot_state",
+  "staff"
  ],
  "fields": [
   {
@@ -50,6 +51,12 @@
    "fieldname": "bot_state",
    "fieldtype": "Data",
    "label": "Bot State"
+  },
+  {
+   "fieldname": "staff",
+   "fieldtype": "Link",
+   "label": "Staff",
+   "options": "Staff"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -65,7 +72,7 @@
    "link_fieldname": "to"
   }
  ],
- "modified": "2025-11-30 03:26:46.481891",
+ "modified": "2025-12-02 18:38:05.222358",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "WhatsApp Contact",

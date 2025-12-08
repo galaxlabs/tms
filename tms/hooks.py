@@ -296,7 +296,27 @@ doc_events = {
         "on_update_after_submit": "tms.utils.run_server_script_for_doc_event",
     },
 
-    "WhatsApp Message": {
-        "after_insert": "tms.utils.whatsapp_bot.handle_incoming_whatsapp",
+    # "WhatsApp Message": {
+    #     "after_insert": "tms.utils.whatsapp_bot.handle_incoming_whatsapp",
+    # },
+    
+    "Trip": {
+        "after_save": "tms.utils.pdf_hooks.create_pdf_on_submit"
     },
+    "Quotation": {
+        "on_submit": "tms.utils.pdf_hooks.create_pdf_on_submit"
+    },
+    "Sales Order": {
+        "on_submit": "tms.utils.pdf_hooks.create_pdf_on_submit"
+    },
+    "Sales Invoice": {
+        "on_submit": "tms.utils.pdf_hooks.create_pdf_on_submit"
+    },
+    "Delivery Note": {
+        "on_submit": "tms.utils.pdf_hooks.create_pdf_on_submit"
+    },
+    "Dunning": {
+        "on_submit": "tms.utils.pdf_hooks.create_pdf_on_submit"
+}
+
 }

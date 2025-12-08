@@ -28,8 +28,8 @@
   "reference_name",
   "profile_name",
   "section_break_pxer",
-  "body_param",
   "message",
+  "body_param",
   "template_parameters",
   "template_header_parameters"
  ],
@@ -203,7 +203,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-28 22:54:40.028122",
+ "modified": "2025-12-02 18:33:55.545913",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "WhatsApp Message",

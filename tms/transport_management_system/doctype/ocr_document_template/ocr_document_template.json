@@ -1,0 +1,117 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-12-08 20:12:55.077873",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "document_type",
+  "country",
+  "section_break_1",
+  "mrz_present",
+  "mrz_pattern",
+  "parse_instructions",
+  "column_break_1",
+  "name_hints",
+  "id_patterns_json",
+  "forbidden_tokens",
+  "raw_sample_text"
+ ],
+ "fields": [
+  {
+   "fieldname": "document_type",
+   "fieldtype": "Select",
+   "label": "Document Type",
+   "options": "Passport\nIqama\nVisa\nNusuk\nGenericID",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "label": "Country",
+   "options": "Country",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break",
+   "label": "Template Rules"
+  },
+  {
+   "fieldname": "mrz_present",
+   "fieldtype": "Check",
+   "label": "MRZ Present",
+   "default": "1"
+  },
+  {
+   "fieldname": "mrz_pattern",
+   "fieldtype": "Data",
+   "label": "MRZ Pattern / Regex",
+   "description": "Optional regex or notes on how MRZ looks for this document type."
+  },
+  {
+   "fieldname": "parse_instructions",
+   "fieldtype": "Small Text",
+   "label": "Parsing Instructions",
+   "description": "Human description: how to interpret lines, where name/id/nationality usually appear."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "name_hints",
+   "fieldtype": "Small Text",
+   "label": "Name Hints",
+   "description": "Words near the name field (e.g. NAME, Given Name, الاسم). One per line."
+  },
+  {
+   "fieldname": "id_patterns_json",
+   "fieldtype": "Code",
+   "label": "ID Patterns JSON",
+   "description": "JSON array of regex patterns for ID/passport/iqama numbers."
+  },
+  {
+   "fieldname": "forbidden_tokens",
+   "fieldtype": "Small Text",
+   "label": "Forbidden Tokens",
+   "description": "Tokens that should never be parsed as ID (e.g. GOVERNMENT, KINGDOM). One per line."
+  },
+  {
+   "fieldname": "raw_sample_text",
+   "fieldtype": "Long Text",
+   "label": "Sample OCR Text",
+   "description": "Paste real OCR text for this template. Used as reference & for testing."
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-12-08 20:12:55.077873",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "OCR Document Template",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

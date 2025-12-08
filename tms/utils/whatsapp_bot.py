@@ -1,6 +1,9 @@
+# Last one
+import re
 import json
 import frappe
-from frappe.utils import now_datetime
+from frappe.utils import nowdate, now_datetime
+
 
 from tms.utils.whatsapp_utils import (
     normalize_phone,
@@ -12,45 +15,138 @@ from tms.utils.whatsapp_utils import (
 # ---------------------------------------------------------------------------
 # Entry point: after_insert on WhatsApp Message
 # ---------------------------------------------------------------------------
+# def _ask_route_choice(doc, contact):
+#     """Ask driver to choose a Route from a numbered list and store options on contact."""
+#     routes = frappe.get_all(
+#         "Route",
+#         fields=["name"],
+#         order_by="name asc",
+#     )
 
+#     if not routes:
+#         _send_thread_reply(
+#             doc,
+#             "⚠ No routes are defined in the system. Please contact the office.\n"
+#             "⚠ لا توجد خطوط سير معرّفة في النظام. يرجى التواصل مع المكتب.\n"
+#             "⚠ سسٹم میں کوئی روٹ سیٹ نہیں کیا گیا۔ براہ کرم دفتر سے رابطہ کریں۔"
+#         )
+#         return
+
+#     options = [r["name"] for r in routes]
+
+#     # store list on contact so we can map 1..N back to Route name
+#     if hasattr(contact, "route_options_json"):
+#         contact.route_options_json = json.dumps(options, ensure_ascii=False)
+#     if hasattr(contact, "bot_state"):
+#         contact.bot_state = "ASKING_ROUTE"
+
+#     contact.save(ignore_permissions=True)
+
+#     # Build message with numbered list
+#     lines = [
+#         "🛣 Please choose your route by replying with the number:\n"
+#         "من فضلك اختر خط السير بإرسال رقم الخيار:\n"
+#         "براہ کرم نیچے دی گئی فہرست میں سے نمبر بھیج کر روٹ منتخب کریں:",
+#         "",
+#     ]
+#     for idx, name in enumerate(options, start=1):
+#         lines.append(f"{idx}. {name}")
+
+#     msg = "\n".join(lines)
+#     _send_thread_reply(doc, msg)
+def _ask_route_choice(doc, contact):
+    """Ask driver to choose a Route from a numbered list and store options on contact."""
+    routes = frappe.get_all(
+        "Route",
+        fields=["name"],
+        order_by="name asc",
+    )
+
+    if not routes:
+        _send_thread_reply(
+            doc,
+            "⚠ No routes are defined in the system. Please contact the office.\n"
+            "⚠ لا توجد خطوط سير معرّفة في النظام. يرجى التواصل مع المكتب.\n"
+            "⚠ سسٹم میں کوئی روٹ سیٹ نہیں کیا گیا۔ براہ کرم دفتر سے رابطہ کریں۔"
+        )
+        return
+
+    options = [r["name"] for r in routes]
+
+    # store list on contact so we can map 1..N back to Route name
+    if hasattr(contact, "route_options_json"):
+        contact.route_options_json = json.dumps(options, ensure_ascii=False)
+    if hasattr(contact, "bot_state"):
+        contact.bot_state = "ASKING_ROUTE"
+
+    contact.save(ignore_permissions=True)
+
+    # Build message with numbered list
+    lines = [
+        "🛣 Please choose your route by replying with the *number*:\n"
+        "من فضلك اختر خط السير بإرسال *رقم الخيار*:\n"
+        "براہ کرم نیچے دی گئی فہرست میں سے *نمبر* بھیج کر روٹ منتخب کریں:",
+        "",
+    ]
+    for idx, name in enumerate(options, start=1):
+        lines.append(f"{idx}. {name}")
+
+    msg = "\n".join(lines)
+    _send_thread_reply(doc, msg)
+
+
+# def handle_incoming_whatsapp(doc, event=None):
+#     frappe.set_user("whatsapp.bot@example.com")
+#     """Hook: called on after_insert of WhatsApp Message."""
+#     if doc.type != "Incoming":
+#         return
+
+#     content_type = (doc.content_type or "").lower()
+
+#     # ✅ safer way to read from/from_
+#     sender_no_raw = (doc.get("from") or doc.get("from_") or "").strip()
+#     sender_no = normalize_phone(sender_no_raw)
+#     profile_name = (doc.profile_name or "").strip()
+
+#     # debug log (optional, but VERY useful)
+#     frappe.log_error(
+#         f"RAW FROM: {sender_no_raw}\nNORMALIZED: {sender_no}",
+#         "TripBot Incoming FROM Debug",
+#     )
+
+#     contact = get_or_create_contact(sender_no, profile_name)
+
+#     if content_type == "text":
+#         _handle_text_message(doc, contact)
+#     elif content_type in ("image", "document"):
+#         _handle_media_message(doc, contact)
+#     else:
+#         return
 def handle_incoming_whatsapp(doc, event=None):
-    """
-    Hook: called on after_insert of WhatsApp Message.
-
-    Configure in hooks.py:
-        "WhatsApp Message": {
-            "after_insert": "tms.utils.whatsapp_bot.handle_incoming_whatsapp",
-        },
-    """
-    # only care about Incoming
+    frappe.set_user("whatsapp.bot@example.com")
+    """Hook: called on after_insert of WhatsApp Message."""
     if doc.type != "Incoming":
         return
 
-    try:
-        content_type = (doc.content_type or "").lower()
+    content_type = (doc.content_type or "").lower()
 
-        # sender info
-        sender_no = normalize_phone(
-            getattr(doc, "from_", "") or getattr(doc, "from", "") or ""
-        )
-        profile_name = (doc.profile_name or "").strip()
+    sender_no_raw = (doc.get("from") or doc.get("from_") or "").strip()
+    sender_no = normalize_phone(sender_no_raw)
+    profile_name = (doc.profile_name or "").strip()
 
-        # ensure contact row exists
-        contact = get_or_create_contact(sender_no, profile_name)
+    frappe.log_error(
+        f"RAW FROM: {sender_no_raw}\nNORMALIZED: {sender_no}",
+        "TripBot Incoming FROM Debug",
+    )
 
-        if content_type == "text":
-            _handle_text_message(doc, contact)
-        elif content_type in ("image", "document"):
-            _handle_media_message(doc, contact)
-        else:
-            # ignore reactions, buttons, etc for now
-            return
+    contact = get_or_create_contact(sender_no, profile_name)
 
-    except Exception:
-        frappe.log_error(
-            frappe.get_traceback(),
-            "WhatsApp Bot Error in handle_incoming_whatsapp",
-        )
+    if content_type == "text":
+        _handle_text_message(doc, contact)
+    elif content_type in ("image", "document"):
+        _handle_media_message(doc, contact)
+    else:
+        return
 
 
 # ---------------------------------------------------------------------------
@@ -58,13 +154,13 @@ def handle_incoming_whatsapp(doc, event=None):
 # ---------------------------------------------------------------------------
 
 def _update_contact_state(contact, **kwargs):
-    """Update WhatsApp Contacts fields safely."""
+    """Update WhatsApp Contact fields safely."""
     if not contact:
         return
 
     dirty = False
     for field, value in kwargs.items():
-        # only set fields that actually exist on DocType
+        # Frappe will error if field doesn't exist – user must create fields in DocType
         if hasattr(contact, field):
             setattr(contact, field, value)
             dirty = True
@@ -77,6 +173,278 @@ def _update_contact_state(contact, **kwargs):
 # Text handler (passenger count)
 # ---------------------------------------------------------------------------
 
+# def _handle_text_message(doc, contact):
+#     """Handle incoming text based on contact.bot_state."""
+#     if not contact:
+#         return
+
+#     state = (getattr(contact, "bot_state", "") or "").upper()
+#     text = (doc.message or "").strip()
+
+#     # -------------------------------------------------------
+#     # 1) State: ASKING_ROUTE  (driver chooses from Route list)
+#     # -------------------------------------------------------
+#     if state == "ASKING_ROUTE":
+#         # ✅ NEW: handle "no" / "cancel" replies
+#         text_lower = text.strip().lower()
+#         if text_lower in ("no", "cancel", "stop", "لا", "لا شكراً", "خروج"):
+#             _update_contact_state(
+#                 contact,
+#                 bot_state="",          # exit route selection
+#                 route_options_json="", # clear options
+#                 preferred_route="",    # clear any previous choice
+#             )
+#             _send_thread_reply(
+#                 doc,
+#                 "❌ Route selection cancelled.\n"
+#                 "Whenever you are ready, send *route* to choose again.\n\n"
+#                 "❌ تم إلغاء اختيار خط السير.\n"
+#                 "عند جاهزيتك أرسل كلمة *route* لاختيار خط جديد.\n\n"
+#                 "❌ روٹ کا انتخاب منسوخ کر دیا گیا ہے۔\n"
+#                 "جب چاہیں *route* بھیج کر نیا روٹ منتخب کریں۔"
+#             )
+#             return
+
+#         # existing behaviour: expect a number
+#         num = _extract_int(text)
+
+#         if not num or num <= 0:
+#             _send_thread_reply(
+#                 doc,
+#                 "❗ Please reply with the *number* of the route from the list.\n"
+#                 "❗ من فضلك أرسل *رقم* خط السير من القائمة.\n"
+#                 "❗ براہ کرم لسٹ میں سے روٹ کا *نمبر* بھیجیں۔"
+#             )
+#             return
+
+#         options_raw = getattr(contact, "route_options_json", "") or ""
+#         try:
+#             options = json.loads(options_raw) if options_raw else []
+#         except Exception:
+#             options = []
+
+#         if not options or num > len(options):
+#             # something went wrong, re-send the list
+#             _ask_route_choice(doc, contact)
+#             return
+
+#         chosen_route = options[num - 1]
+#         ...
+
+#     # -------------------------------------------------------
+#     # 2) State: ASKED_PASSENGERS  (existing logic)
+#     # -------------------------------------------------------
+    
+#         num = _extract_int(text)
+#         if not num or num <= 0:
+#             msg = (
+#                 "Please send only the number of passengers.\n"
+#                 "من فضلك أرسل عدد الركاب كرقم فقط.\n"
+#                 "براہ کرم صرف مسافروں کی تعداد نمبر میں بھیجیں۔"
+#             )
+#             _send_thread_reply(doc, msg)
+#             return
+
+#         # Set expected_passengers & move to COLLECTING_DOCS
+#         received = int(getattr(contact, "received_images", 0) or 0)
+#         _update_contact_state(
+#             contact,
+#             expected_passengers=num,
+#             bot_state="COLLECTING_DOCS",
+#         )
+
+#         remaining = max(num - received, 0)
+
+#         if received == 0:
+#             msg = (
+#                 f"✅ Got it. You said {num} passengers.\n"
+#                 f"Please send {num} clear images or PDFs (Iqama / Passport / Visa / Nusuk), "
+#                 f"one document per passenger.\n\n"
+#                 f"✅ تم التأكيد. عدد الركاب {num}.\n"
+#                 f"من فضلك أرسل {num} صورًا أو ملفات PDF واضحة (إقامة / جواز سفر / تأشيرة / نسك)، "
+#                 f"لكل راكب مستند واحد.\n\n"
+#                 f"✅ ٹھیک ہے، آپ نے {num} مسافروں کا بتایا ہے۔\n"
+#                 f"براہ کرم {num} صاف تصویریں یا پی ڈی ایف بھیجیں (اقامہ / پاسپورٹ / ویزا / نسک)، "
+#                 f"ہر مسافر کے لیے ایک دستاویز۔"
+#             )
+#         elif remaining > 0:
+#             msg = (
+#                 f"✅ I registered {num} passengers.\n"
+#                 f"I already received {received} document(s). "
+#                 f"Please send remaining {remaining} document(s).\n\n"
+#                 f"✅ تم تسجيل {num} ركاب.\n"
+#                 f"تم استلام {received} مستند(ات) حتى الآن. "
+#                 f"من فضلك أرسل باقي {remaining} مستند(ات).\n\n"
+#                 f"✅ {num} مسافروں کا اندراج ہوگیا ہے۔\n"
+#                 f"اب تک {received} دستاویزات موصول ہو چکی ہیں۔ "
+#                 f"براہ کرم باقی {remaining} دستاویز بھیجیں۔"
+#             )
+#         else:
+#             sender_no = contact.whatsapp_id
+#             driver_name = _find_driver_by_phone(sender_no)
+#             trip = _get_or_create_trip_for_contact(driver_name, contact)
+#             _finalize_trip_and_kashf(contact, driver_name, trip)
+#             return
+
+#         _send_thread_reply(doc, msg)
+
+#     # other states ignored
+#     return
+# def _handle_text_message(doc, contact):
+#     """Handle incoming text based on contact.bot_state."""
+#     if not contact:
+#         return
+
+#     state = (getattr(contact, "bot_state", "") or "").upper()
+#     text = (doc.message or "").strip()
+#     text_lower = text.lower()
+
+#     # ------------------------------------------------------------------
+#     # 1) While we are collecting documents, a NUMBER = passenger count
+#     # ------------------------------------------------------------------
+#     if state in ("", "COLLECTING_DOCS"):
+#         num = _extract_int(text)
+
+#         if not num or num <= 0:
+#             # ignore normal chat / wrong text here
+#             _send_thread_reply(
+#                 doc,
+#                 "🧾 When you finish sending all passenger documents, please reply with the *number of passengers*.\n"
+#                 "🧾 عند الانتهاء من إرسال جميع مستندات الركاب، أرسل *عدد الركاب* كرقم فقط.\n"
+#                 "🧾 جب تمام مسافروں کی دستاویزات بھیج لیں، تب *مسافروں کی تعداد* نمبر میں بھیجیں۔"
+#             )
+#             return
+
+#         # valid passenger count
+#         received = int(getattr(contact, "received_images", 0) or 0)
+#         expected = int(num)
+
+#         _update_contact_state(
+#             contact,
+#             expected_passengers=expected,
+#             bot_state="ASKING_ROUTE",
+#         )
+
+#         msg = (
+#             f"✅ Noted: {expected} passengers.\n"
+#             f"📄 I have {received} document(s) so far.\n"
+#             "Now please choose your route from the list below.\n\n"
+#             f"✅ تم تسجيل {expected} ركاب.\n"
+#             f"📄 تم استلام {received} مستند(ات) حتى الآن.\n"
+#             "الآن من فضلك اختر خط السير من القائمة.\n\n"
+#             f"✅ {expected} مسافروں کی تعداد درج کر لی گئی ہے۔\n"
+#             f"📄 اب تک {received} دستاویزات موصول ہو چکی ہیں۔\n"
+#             "اب براہ کرم نیچے دی گئی فہرست سے روٹ منتخب کریں۔"
+#         )
+#         _send_thread_reply(doc, msg)
+
+#         # show route list
+#         _ask_route_choice(doc, contact)
+#         return
+
+#     # ------------------------------------------------------------------
+#     # 2) ASKING_ROUTE state — waiting for route number
+#     # ------------------------------------------------------------------
+#     if state == "ASKING_ROUTE":
+#         # allow cancel
+#         if text_lower in ("no", "cancel", "stop", "لا", "لا شكراً", "خروج"):
+#             _update_contact_state(
+#                 contact,
+#                 bot_state="",
+#                 route_options_json="",
+#                 preferred_route="",
+#             )
+#             _send_thread_reply(
+#                 doc,
+#                 "❌ Route selection cancelled.\n"
+#                 "You can start again later by sending passenger documents.\n\n"
+#                 "❌ تم إلغاء اختيار خط السير.\n"
+#                 "يمكنك البدء من جديد لاحقًا بإرسال مستندات الركاب.\n\n"
+#                 "❌ روٹ کا انتخاب منسوخ کر دیا گیا ہے۔\n"
+#                 "آپ بعد میں دوبارہ مسافروں کی دستاویزات بھیج کر آغاز کر سکتے ہیں۔"
+#             )
+#             return
+
+#         num = _extract_int(text)
+#         if not num or num <= 0:
+#             _send_thread_reply(
+#                 doc,
+#                 "❗ Please reply with the *number* of the route from the list (1, 2, 3...).\n"
+#                 "❗ من فضلك أرسل *رقم* خط السير من القائمة (1، 2، 3...).\n"
+#                 "❗ براہ کرم لسٹ میں سے روٹ کا *نمبر* بھیجیں (1، 2، 3...)."
+#             )
+#             return
+
+#         options_raw = getattr(contact, "route_options_json", "") or ""
+#         try:
+#             options = json.loads(options_raw) if options_raw else []
+#         except Exception:
+#             options = []
+
+#         if not options or num > len(options):
+#             _send_thread_reply(
+#                 doc,
+#                 "⚠ This number is not in the list. Please choose a valid route number.\n"
+#                 "⚠ هذا الرقم غير موجود في القائمة. من فضلك اختر رقمًا صحيحًا من القائمة.\n"
+#                 "⚠ یہ نمبر فہرست میں موجود نہیں۔ براہ کرم درست نمبر منتخب کریں۔"
+#             )
+#             return
+
+#         chosen_route = options[num - 1]
+
+#         # Save chosen route
+#         _update_contact_state(
+#             contact,
+#             preferred_route=chosen_route,
+#             bot_state="ROUTE_SET",
+#             route_options_json="",
+#         )
+
+#         # Find driver again from contact
+#         sender_no = contact.whatsapp_id
+#         driver_name = _find_driver_by_phone(sender_no)
+#         if not driver_name:
+#             _send_thread_reply(
+#                 doc,
+#                 "⚠ Your number is not registered as a driver in the system.\n"
+#                 "⚠ رقمك غير مسجل كسائق في النظام.\n"
+#                 "⚠ آپ کا نمبر سسٹم میں ڈرائیور کے طور پر رجسٹر نہیں ہے۔"
+#             )
+#             return
+
+#         # Get or create Trip and set route
+#         trip = _get_or_create_trip_for_contact(driver_name, contact)
+#         if trip.trip_route != chosen_route:
+#             trip.trip_route = chosen_route
+#             trip.save(ignore_permissions=True)
+
+#         # Check if we have enough documents for passengers
+#         expected = int(getattr(contact, "expected_passengers", 0) or 0)
+#         received = int(getattr(contact, "received_images", 0) or 0)
+
+#         if received < expected:
+#             _send_thread_reply(
+#                 doc,
+#                 f"ℹ Route selected: {chosen_route}.\n"
+#                 f"📄 You told {expected} passengers, but I received only {received} document(s).\n"
+#                 f"Please send remaining {expected - received} document(s).\n\n"
+#                 f"ℹ تم اختيار خط السير: {chosen_route}.\n"
+#                 f"📄 عدد الركاب {expected}، لكن تم استلام {received} مستند(ات) فقط.\n"
+#                 f"من فضلك أرسل باقي {expected - received} مستند(ات).\n\n"
+#                 f"ℹ روٹ منتخب ہو گیا: {chosen_route}.\n"
+#                 f"📄 آپ نے {expected} مسافروں کا بتایا، لیکن صرف {received} دستاویزات موصول ہوئیں۔\n"
+#                 f"براہ کرم باقی {expected - received} دستاویزات بھیج دیں۔"
+#             )
+#             # go back to collecting docs
+#             _update_contact_state(contact, bot_state="COLLECTING_DOCS")
+#             return
+
+#         # We have documents + passenger count + route → finalize
+#         _finalize_trip_and_kashf(contact, driver_name, trip)
+#         return
+
+#     # other states: do nothing / future flows
+#     return
 def _handle_text_message(doc, contact):
     """Handle incoming text based on contact.bot_state."""
     if not contact:
@@ -84,79 +452,145 @@ def _handle_text_message(doc, contact):
 
     state = (getattr(contact, "bot_state", "") or "").upper()
     text = (doc.message or "").strip()
+    sender_no = contact.whatsapp_id
+    driver_name = _find_driver_by_phone(sender_no)
 
-    # Only one state for now: expecting passenger count
-    if state == "ASKED_PASSENGERS":
+    # SAFEGUARD: if we still don't know driver, just ignore advanced logic
+    if not driver_name:
+        return
+
+    # -------------------------------------------------------
+    # 1) State: ASKING_ROUTE  (driver chooses from Route list)
+    # -------------------------------------------------------
+    if state == "ASKING_ROUTE":
         num = _extract_int(text)
+
         if not num or num <= 0:
-            msg = (
-                "Please send only the number of passengers.\n"
-                "من فضلك أرسل عدد الركاب كرقم فقط.\n"
-                "براہ کرم صرف مسافروں کی تعداد نمبر میں بھیجیں۔"
+            _send_thread_reply(
+                doc,
+                "❗ Please reply with the *number* of the route from the list.\n"
+                "❗ من فضلك أرسل *رقم* خط السير من القائمة.\n"
+                "❗ براہ کرم لسٹ میں سے روٹ کا *نمبر* بھیجیں۔"
             )
-            _send_thread_reply(doc, msg)
             return
 
-        # Set expected_passengers & move to COLLECTING_DOCS
-        received = int(getattr(contact, "received_images", 0) or 0)
-        _update_contact_state(
-            contact,
-            expected_passengers=num,
-            bot_state="COLLECTING_DOCS",
-        )
+        options_raw = getattr(contact, "route_options_json", "") or ""
+        try:
+            options = json.loads(options_raw) if options_raw else []
+        except Exception:
+            options = []
 
-        # If already received some docs, inform status
-        remaining = max(num - received, 0)
-
-        if received == 0:
-            msg = (
-                f"✅ Got it. You said {num} passengers.\n"
-                f"Please send {num} clear images or PDFs (Iqama / Passport / Visa / Nusuk), "
-                f"one document per passenger.\n\n"
-                f"✅ تم التأكيد. عدد الركاب {num}.\n"
-                f"من فضلك أرسل {num} صورًا أو ملفات PDF واضحة (إقامة / جواز سفر / تأشيرة / نسك)، "
-                f"لكل راكب مستند واحد.\n\n"
-                f"✅ ٹھیک ہے، آپ نے {num} مسافروں کا بتایا ہے۔\n"
-                f"براہ کرم {num} صاف تصویریں یا پی ڈی ایف بھیجیں (اقامہ / پاسپورٹ / ویزا / نسک)، "
-                f"ہر مسافر کے لیے ایک دستاویز۔"
+        if not options or num > len(options):
+            _send_thread_reply(
+                doc,
+                "❗ Invalid option. Please reply with a valid route number from the list.\n"
+                "❗ خيار غير صالح. من فضلك أرسل رقم صحيح من القائمة.\n"
+                "❗ غلط آپشن۔ براہ کرم لسٹ میں سے درست نمبر بھیجیں۔"
             )
-        elif remaining > 0:
-            msg = (
-                f"✅ I registered {num} passengers.\n"
-                f"I already received {received} document(s). "
-                f"Please send remaining {remaining} document(s).\n\n"
-                f"✅ تم تسجيل {num} ركاب.\n"
-                f"تم استلام {received} مستند(ات) حتى الآن. "
-                f"من فضلك أرسل باقي {remaining} مستند(ات).\n\n"
-                f"✅ {num} مسافروں کا اندراج ہوگیا ہے۔\n"
-                f"اب تک {received} دستاویزات موصول ہو چکی ہیں۔ "
-                f"براہ کرم باقی {remaining} دستاویز بھیجیں۔"
-            )
-        else:
-            # already have enough docs → finalize immediately
-            sender_no = contact.whatsapp_id
-            driver_name = _find_driver_by_phone(sender_no)
-            if not driver_name:
-                # safety: if cannot find driver here, just stop
-                _send_thread_reply(
-                    doc,
-                    "⚠️ System could not verify driver for this number.\n"
-                    "⚠️ تعذر على النظام التحقق من السائق لهذا الرقم.\n"
-                    "⚠️ سسٹم اس نمبر کے لیے ڈرائیور کی تصدیق نہیں کر سکا۔"
-                )
-                return
-
-            trip = _get_or_create_trip_for_contact(driver_name, contact)
-            _finalize_trip_and_kashf(contact, driver_name, trip)
             return
 
+        chosen_route = options[num - 1]
+
+        # Save chosen route on contact
+        if hasattr(contact, "preferred_route"):
+            contact.preferred_route = chosen_route
+        contact.bot_state = "ROUTE_SET"
+        contact.route_options_json = ""
+        contact.save(ignore_permissions=True)
+
+        # Update the current Trip with this route
+        trip = _get_or_create_trip_for_contact(driver_name, contact)
+        if trip.trip_route != chosen_route:
+            trip.trip_route = chosen_route
+            trip.save(ignore_permissions=True)
+
+        # Maybe now we can finalize (if we already have all docs & passenger count)
+        if _maybe_finalize_trip(contact, driver_name, trip):
+            return
+
+        msg = (
+            f"✅ Route selected: {chosen_route}.\n"
+            "If any passenger documents are still pending, please send them now.\n\n"
+            "✅ تم اختيار خط السير: {route}.\n"
+            "إذا كانت هناك مستندات ركاب متبقية، من فضلك أرسلها الآن.\n\n"
+            "✅ روٹ منتخب ہو گیا: {route}.\n"
+            "اگر کوئی مسافر کی دستاویزات باقی ہوں تو براہ کرم اب بھیج دیں۔"
+        ).replace("{route}", chosen_route)
         _send_thread_reply(doc, msg)
+        return
 
-    # other states ignored for now
-    return
+    # -------------------------------------------------------
+    # 2) Default / WAITING_PASSENGER_COUNT / COLLECTING_DOCS:
+    #    treat numeric text as passenger count
+    # -------------------------------------------------------
+    num = _extract_int(text)
+    if not num or num <= 0:
+        # don't spam; just soft guidance
+        msg = (
+            "ℹ️ If you are confirming passengers, please send the *number of passengers* only.\n"
+            "ℹ️ إذا كنت تؤكد عدد الركاب، من فضلك أرسل *عدد الركاب* فقط.\n"
+            "ℹ️ اگر آپ مسافروں کی تعداد بتانا چاہتے ہیں، تو براہ کرم صرف *مسافروں کی تعداد* نمبر میں بھیجیں۔"
+        )
+        _send_thread_reply(doc, msg)
+        return
+
+    expected = num
+    received = int(getattr(contact, "received_images", 0) or 0)
+
+    # Save expected passengers and set state
+    _update_contact_state(
+        contact,
+        expected_passengers=expected,
+        bot_state="COLLECTING_DOCS",
+    )
+
+    trip = _get_or_create_trip_for_contact(driver_name, contact)
+
+    # CASE A: no documents yet → ask to send docs
+    if received == 0:
+        msg = (
+            f"✅ Got it. You said {expected} passengers.\n"
+            f"Please send {expected} clear images or PDFs (Iqama / Passport / Visa / Nusuk), "
+            f"one document per passenger.\n\n"
+            f"✅ تم التأكيد. عدد الركاب {expected}.\n"
+            f"من فضلك أرسل {expected} صورًا أو ملفات PDF واضحة (إقامة / جواز سفر / تأشيرة / نسك)، "
+            f"لكل راكب مستند واحد.\n\n"
+            f"✅ ٹھیک ہے، آپ نے {expected} مسافروں کا بتایا ہے۔\n"
+            f"براہ کرم {expected} صاف تصویریں یا پی ڈی ایف بھیجیں (اقامہ / پاسپورٹ / ویزا / نسک)، "
+            f"ہر مسافر کے لیے ایک دستاویز۔"
+        )
+        _send_thread_reply(doc, msg)
+        return
+
+    # CASE B: some docs already received
+    if received < expected:
+        remaining = expected - received
+        msg = (
+            f"✅ I registered {expected} passengers.\n"
+            f"I already received {received} document(s). "
+            f"Please send remaining {remaining} document(s).\n\n"
+            f"✅ تم تسجيل {expected} ركاب.\n"
+            f"تم استلام {received} مستند(ات) حتى الآن. "
+            f"من فضلك أرسل باقي {remaining} مستند(ات).\n\n"
+            f"✅ {expected} مسافروں کا اندراج ہو گیا ہے۔\n"
+            f"اب تک {received} دستاویزات موصول ہو چکی ہیں۔ "
+            f"براہ کرم باقی {remaining} دستاویز بھیجیں۔"
+        )
+        _send_thread_reply(doc, msg)
+        return
+
+    # CASE C: received >= expected → now ask for route if not set
+    if not getattr(contact, "preferred_route", None):
+        _ask_route_choice(doc, contact)
+        return
+
+    # CASE D: everything is ready (route already chosen) → finalize
+    if _maybe_finalize_trip(contact, driver_name, trip):
+        return
 
 
-def _extract_int(text: str):
+
+def _extract_int(text: str) -> int | None:
     """Extract first integer from text."""
     digits = ""
     for ch in text:
@@ -176,8 +610,240 @@ def _extract_int(text: str):
 # Media handler (image / doc)
 # ---------------------------------------------------------------------------
 
+# def _handle_media_message(doc, contact):
+#     """Handle incoming image or PDF (WhatsApp Message)."""
+#     if not contact:
+#         return
+
+#     sender_no = normalize_phone(getattr(doc, "from_", "") or getattr(doc, "from", "") or "")
+#     if not sender_no:
+#         return
+
+#     # 1) Resolve driver (Staff.mobile_no)
+#     driver_name = _find_driver_by_phone(sender_no)
+#     if not driver_name:
+#         _send_thread_reply(
+#             doc,
+#             "⚠️ Your number is not registered as a driver in the system.\n"
+#             "⚠️ رقمك غير مسجل كسائق في النظام.\n"
+#             "⚠️ آپ کا نمبر سسٹم میں ڈرائیور کے طور پر رجسٹر نہیں ہے۔"
+#         )
+#         return
+
+#     # 1b) Ensure route is chosen first
+#     preferred_route = getattr(contact, "preferred_route", None)
+#     if not preferred_route:
+#         _ask_route_choice(doc, contact)
+#         return
+
+#     # 2) Get or create Trip bound to this contact
+#     trip = _get_or_create_trip_for_contact(driver_name, contact)
+
+#     # 3) Get file_url from WhatsApp Message.attach (created by webhook)
+#     file_url = (doc.attach or "").strip()
+#     ...
+
+#     if not file_url:
+#         _send_thread_reply(
+#             doc,
+#             "🕐 I received your message, but no document/image was attached.\n"
+#             "🕐 تم استلام رسالتك، لكن لا يوجد مستند أو صورة مرفقة.\n"
+#             "🕐 میسج ملا لیکن کوئی تصویر یا دستاویز منسلک نہیں تھی۔"
+#         )
+#         return
+
+#     # 4) Run OCR + create OCR History record
+#     ocr_ok = _create_ocr_history_and_run_ocr(doc, trip, file_url)
+
+#     if not ocr_ok:
+#         # do NOT increment received_images, ask to resend this image
+#         msg = (
+#             "⚠️ This document image is not clear, please send a new clearer image.\n"
+#             "⚠️ صورة هذا المستند غير واضحة، من فضلك أرسل صورة أوضح.\n"
+#             "⚠️ اس دستاویز کی تصویر واضح نہیں ہے، براہ کرم نئی صاف تصویر بھیجیں۔"
+#         )
+#         _send_thread_reply(doc, msg)
+#         return
+
+#     # 5) Increment received_images
+#     received = int(getattr(contact, "received_images", 0) or 0) + 1
+#     expected = int(getattr(contact, "expected_passengers", 0) or 0)
+
+#     # If we never asked passenger count yet, ask now (but keep received counter)
+#     if expected <= 0 and (getattr(contact, "bot_state", "") or "").upper() not in ("ASKED_PASSENGERS", "COLLECTING_DOCS"):
+#         _update_contact_state(contact, received_images=received, bot_state="ASKED_PASSENGERS")
+
+#         msg = (
+#             "🧾 I received your document.\n"
+#             "How many passengers are going on this trip?\n\n"
+#             "🧾 تم استلام مستندك.\n"
+#             "كم عدد الركاب في هذه الرحلة؟\n\n"
+#             "🧾 آپ کی دستاویز موصول ہوگئی ہے۔\n"
+#             "اس سفر پر کتنے مسافر جائیں گے؟"
+#         )
+#         _send_thread_reply(doc, msg)
+#         return
+
+#     # If expected already known, update state and inform
+#     _update_contact_state(contact, received_images=received, bot_state="COLLECTING_DOCS")
+
+#     if expected > 0:
+#         if received < expected:
+#             msg = (
+#                 f"✅ Document {received}/{expected} received.\n"
+#                 f"Please send the remaining {expected - received} document(s).\n\n"
+#                 f"✅ تم استلام المستند رقم {received} من {expected}.\n"
+#                 f"من فضلك أرسل باقي {expected - received} مستند(ات).\n\n"
+#                 f"✅ {received}/{expected} دستاویز موصول ہو گئی ہے۔\n"
+#                 f"براہ کرم باقی {expected - received} دستاویز بھیج دیں۔"
+#             )
+#             _send_thread_reply(doc, msg)
+#         elif received == expected:
+#             _finalize_trip_and_kashf(contact, driver_name, trip)
+#         else:  # received > expected
+#             msg = (
+#                 f"ℹ️ You sent {received} documents, but expected {expected}.\n"
+#                 f"We will process the first {expected} documents.\n\n"
+#                 f"ℹ️ أرسلت {received} مستندات بينما العدد المتوقع {expected}.\n"
+#                 f"سيتم معالجة أول {expected} مستندات.\n\n"
+#                 f"ℹ️ آپ نے {received} دستاویزات بھیجیں، جبکہ متوقع {expected} تھیں۔\n"
+#                 f"پہلی {expected} دستاویزات پر عمل ہوگا۔"
+#             )
+#             _send_thread_reply(doc, msg)
+# last temprary
+# def _handle_media_message(doc, contact):
+#     """Handle incoming image or PDF (WhatsApp Message)."""
+#     if not contact:
+#         return
+
+#     sender_no = normalize_phone(
+#         getattr(doc, "from_", "") or getattr(doc, "from", "") or ""
+#     )
+#     if not sender_no:
+#         return
+
+#     # 1) Resolve driver (Staff.mobile_no)
+#     driver_name = _find_driver_by_phone(sender_no)
+#     if not driver_name:
+#         _send_thread_reply(
+#             doc,
+#             "⚠️ Your number is not registered as a driver in the system.\n"
+#             "⚠️ رقمك غير مسجل كسائق في النظام.\n"
+#             "⚠️ آپ کا نمبر سسٹم میں ڈرائیور کے طور پر رجسٹر نہیں ہے۔"
+#         )
+#         return
+
+#     # 2) Get or create Trip (route can be updated later)
+#     trip = _get_or_create_trip_for_contact(driver_name, contact)
+
+#     # 3) Get file_url from WhatsApp Message.attach (created by webhook)
+#     file_url = (doc.attach or "").strip()
+#     if not file_url:
+#         _send_thread_reply(
+#             doc,
+#             "🕐 I received your message, but no document/image was attached.\n"
+#             "🕐 تم استلام رسالتك، لكن لا يوجد مستند أو صورة مرفقة.\n"
+#             "🕐 میسج ملا لیکن کوئی تصویر یا دستاویز منسلک نہیں تھی۔"
+#         )
+#         return
+
+#     # 4) Run OCR + create OCR History record
+#     ocr_ok = _create_ocr_history_and_run_ocr(doc, trip, file_url)
+
+#     if not ocr_ok:
+#         # do NOT increment received_images, ask to resend this image
+#         msg = (
+#             "⚠️ This document image is not clear, please send a new clearer image.\n"
+#             "⚠️ صورة هذا المستند غير واضحة، من فضلك أرسل صورة أوضح.\n"
+#             "⚠️ اس دستاویز کی تصویر واضح نہیں ہے، براہ کرم نئی صاف تصویر بھیجیں۔"
+#         )
+#         _send_thread_reply(doc, msg)
+#         return
+
+#     # 5) Increment received_images
+#     received = int(getattr(contact, "received_images", 0) or 0) + 1
+#     expected = int(getattr(contact, "expected_passengers", 0) or 0)
+
+#     _update_contact_state(
+#         contact,
+#         received_images=received,
+#         bot_state="COLLECTING_DOCS" if expected <= 0 else "COLLECTING_DOCS",
+#     )
+
+#     # 6) Reply to driver
+#     if expected <= 0:
+#         msg = (
+#             f"✅ Document {received} received.\n"
+#             "If you have more passenger documents, send them now.\n"
+#             "When you finish, reply with the *number of passengers* (for example: 7).\n\n"
+#             f"✅ تم استلام المستند رقم {received}.\n"
+#             "إذا كان لديك مستندات أخرى للركاب، أرسلها الآن.\n"
+#             "عند الانتهاء، أرسل *عدد الركاب* كرقم فقط (مثال: 7).\n\n"
+#             f"✅ {received} دستاویز موصول ہو گئی ہے۔\n"
+#             "اگر مزید مسافروں کی دستاویزات ہیں تو ابھی بھیجیں۔\n"
+#             "جب فارغ ہو جائیں، *مسافروں کی تعداد* نمبر میں بھیجیں (مثال: 7)۔"
+#         )
+#     else:
+#         msg = (
+#             f"✅ Document {received} received.\n"
+#             f"📄 Expected passengers: {expected}.\n\n"
+#             f"✅ تم استلام المستند رقم {received}.\n"
+#             f"📄 عدد الركاب المتوقع: {expected}.\n\n"
+#             f"✅ {received} دستاویز موصول ہو گئی ہے۔\n"
+#             f"📄 متوقع مسافروں کی تعداد: {expected}."
+#         )
+
+#     _send_thread_reply(doc, msg)
+
+# def _handle_media_message(doc, contact):
+#     """For now: just acknowledge media and count it. OCR + Trip later."""
+#     if not contact:
+#         return
+
+#     sender_no = normalize_phone(
+#         getattr(doc, "from_", "") or getattr(doc, "from", "") or ""
+#     )
+#     if not sender_no:
+#         return
+
+#     # If driver is unknown, just warn and stop
+#     driver_name = _find_driver_by_phone(sender_no)
+#     if not driver_name:
+#         _send_thread_reply(
+#             doc,
+#             "⚠️ Your number is not registered as a driver in the system.\n"
+#             "⚠️ رقمك غير مسجل كسائق في النظام.\n"
+#             "⚠️ آپ کا نمبر سسٹم میں ڈرائیور کے طور پر رجسٹر نہیں ہے۔"
+#         )
+#         return
+
+#     # We EXPECT webhook to already have attached File and set doc.attach
+#     file_url = (doc.attach or "").strip()
+#     if not file_url:
+#         # now this should be rare; if you still see this, media download failed
+#         _send_thread_reply(
+#             doc,
+#             "⚠️ I received your message, but could not access the attached file.\n"
+#             "⚠️ تم استلام رسالتك، ولكن تعذر الوصول إلى الملف المرفق.\n"
+#             "⚠️ میسج ملا لیکن فائل تک رسائی نہیں ہو سکی۔"
+#         )
+#         return
+
+#     # Just count received images/documents
+#     received = int(getattr(contact, "received_images", 0) or 0) + 1
+#     _update_contact_state(contact, received_images=received, bot_state="COLLECTING_DOCS")
+
+#     _send_thread_reply(
+#         doc,
+#         f"✅ Document {received} received.\n"
+#         "You can continue sending more passenger documents.\n\n"
+#         f"✅ تم استلام المستند رقم {received}.\n"
+#         "يمكنك متابعة إرسال مستندات الركاب.\n\n"
+#         f"✅ {received} دستاویز موصول ہو گئی ہے۔\n"
+#         "آپ مزید مسافروں کی دستاویزات بھیج سکتے ہیں۔"
+#     )
 def _handle_media_message(doc, contact):
-    """Handle incoming image or PDF (WABA Document)."""
+    """Handle incoming image or PDF (WhatsApp Message)."""
     if not contact:
         return
 
@@ -187,7 +853,7 @@ def _handle_media_message(doc, contact):
     if not sender_no:
         return
 
-    # 1) Resolve driver (Staff via phone + must have Driver record)
+    # 1) Resolve driver (Staff.mobile_no)
     driver_name = _find_driver_by_phone(sender_no)
     if not driver_name:
         _send_thread_reply(
@@ -198,7 +864,7 @@ def _handle_media_message(doc, contact):
         )
         return
 
-    # 2) Get or create Trip bound to this contact
+    # 2) Ensure we have a Trip bound to this driver/contact
     trip = _get_or_create_trip_for_contact(driver_name, contact)
 
     # 3) Get file_url from WhatsApp Message.attach (created by webhook)
@@ -228,103 +894,100 @@ def _handle_media_message(doc, contact):
     # 5) Increment received_images
     received = int(getattr(contact, "received_images", 0) or 0) + 1
     expected = int(getattr(contact, "expected_passengers", 0) or 0)
+    state = (getattr(contact, "bot_state", "") or "").upper()
 
-    # If we never asked passenger count yet, ask now (but keep received counter)
-    if expected <= 0 and (getattr(contact, "bot_state", "") or "").upper() not in (
-        "ASKED_PASSENGERS",
-        "COLLECTING_DOCS",
-    ):
-        _update_contact_state(
-            contact, received_images=received, bot_state="ASKED_PASSENGERS"
-        )
+    # Update counters/state
+    new_state = state
+    if expected <= 0:
+        # We still don't know passenger count yet
+        new_state = "WAITING_PASSENGER_COUNT"
+    else:
+        new_state = "COLLECTING_DOCS"
 
-        msg = (
-            "🧾 I received your document.\n"
-            "How many passengers are going on this trip?\n\n"
-            "🧾 تم استلام مستندك.\n"
-            "كم عدد الركاب في هذه الرحلة؟\n\n"
-            "🧾 آپ کی دستاویز موصول ہوگئی ہے۔\n"
-            "اس سفر پر کتنے مسافر جائیں گے؟"
-        )
-        _send_thread_reply(doc, msg)
-        return
-
-    # If expected already known, update state and inform
     _update_contact_state(
-        contact, received_images=received, bot_state="COLLECTING_DOCS"
+        contact,
+        received_images=received,
+        bot_state=new_state,
     )
 
-    if expected > 0:
-        if received < expected:
+    # 6) If we already know expected passengers & route, maybe finalize now
+    if _maybe_finalize_trip(contact, driver_name, trip):
+        return
+
+    # 7) Reply to driver based on whether we know passenger count
+    if expected <= 0:
+        # We don't know yet how many passengers → ask for count
+        msg = (
+            f"🧾 Document {received} received.\n"
+            "When you finish sending all passenger documents, "
+            "please reply with the *number of passengers*.\n\n"
+            "🧾 تم استلام المستند رقم {received}.\n"
+            "بعد إرسال جميع مستندات الركاب، من فضلك أرسل *عدد الركاب*.\n\n"
+            "🧾 دستاویز نمبر {received} موصول ہو گئی ہے۔\n"
+            "جب سب مسافروں کے دستاویزات بھیج دیں، تو براہ کرم *مسافروں کی تعداد* نمبر میں بھیجیں۔"
+        )
+        msg = msg.replace("{received}", str(received))
+        _send_thread_reply(doc, msg)
+    else:
+        # We know expected passengers but not yet enough docs
+        remaining = max(expected - received, 0)
+        if remaining > 0:
             msg = (
                 f"✅ Document {received}/{expected} received.\n"
-                f"Please send the remaining {expected - received} document(s).\n\n"
+                f"Please send the remaining {remaining} document(s).\n\n"
                 f"✅ تم استلام المستند رقم {received} من {expected}.\n"
-                f"من فضلك أرسل باقي {expected - received} مستند(ات).\n\n"
+                f"من فضلك أرسل باقي {remaining} مستند(ات).\n\n"
                 f"✅ {received}/{expected} دستاویز موصول ہو گئی ہے۔\n"
-                f"براہ کرم باقی {expected - received} دستاویز بھیج دیں۔"
+                f"براہ کرم باقی {remaining} دستاویز بھیج دیں۔"
             )
             _send_thread_reply(doc, msg)
-        elif received == expected:
-            _finalize_trip_and_kashf(contact, driver_name, trip)
-        else:  # received > expected
-            msg = (
-                f"ℹ️ You sent {received} documents, but expected {expected}.\n"
-                f"We will process the first {expected} documents.\n\n"
-                f"ℹ️ أرسلت {received} مستندات بينما العدد المتوقع {expected}.\n"
-                f"سيتم معالجة أول {expected} مستندات.\n\n"
-                f"ℹ️ آپ نے {received} دستاویزات بھیجیں، جبکہ متوقع {expected} تھیں۔\n"
-                f"پہلی {expected} دستاویزات پر عمل ہوگا۔"
-            )
-            _send_thread_reply(doc, msg)
+        else:
+            # Docs >= expected but route not set yet
+            if not getattr(contact, "preferred_route", None):
+                _ask_route_choice(doc, contact)
+            # no finalize here; it will happen after route selection
 
 
 # ---------------------------------------------------------------------------
 # Driver & Trip helpers
 # ---------------------------------------------------------------------------
-def _digits_only(phone: str) -> str:
-    """Keep only digits, used for tolerant matching."""
-    return "".join(ch for ch in (phone or "") if ch.isdigit())
+
+def _normalize_for_match(value: str) -> str:
+    """Keep only digits and compare by last 10 digits."""
+    if not value:
+        return ""
+    digits = re.sub(r"\D", "", value)  # remove everything except 0-9
+    # Use last 10 digits (works well for mobile numbers)
+    return digits[-10:] if len(digits) >= 10 else digits
+
 
 def _find_driver_by_phone(phone: str):
     """
-    Resolve Staff from WhatsApp number using Staff.mobile_no ONLY.
+    Resolve Staff from WhatsApp number by matching LAST 10 DIGITS only.
 
-    We do a relaxed LIKE search on the LAST digits of the number so it works for:
-    - 923003764818
-    - +923003764818
-    - 0300-3764818
-    - 03003764818
+    This makes these equivalent:
+    +923003764818
+    923003764818
+    03003764818
+    3003764818
     """
-    phone = normalize_phone(phone)
-    if not phone:
+    key = _normalize_for_match(phone)
+
+    if not key:
         return None
 
-    # keep only digits
-    digits = "".join(ch for ch in phone if ch.isdigit())
-    if not digits:
-        return None
+    # Get all Staff with some mobile_no, then compare in Python
+    staff_rows = frappe.get_all(
+        "Staff",
+        filters={"mobile_no": ["!=", ""]},
+        fields=["name", "mobile_no"],
+    )
 
-    # build candidates: full, last 10, last 9
-    candidates = set()
-    candidates.add(digits)
-    if len(digits) >= 10:
-        candidates.add(digits[-10:])
-    if len(digits) >= 9:
-        candidates.add(digits[-9:])
+    for row in staff_rows:
+        candidate_key = _normalize_for_match(row.get("mobile_no"))
+        if candidate_key and candidate_key == key:
+            return row["name"]
 
-    # Try longest tails first
-    for tail in sorted(candidates, key=len, reverse=True):
-        rows = frappe.get_all(
-            "Staff",
-            filters={"mobile_no": ["like", f"%{tail}%"]},
-            fields=["name", "mobile_no"],
-            limit=1,
-        )
-        if rows:
-            return rows[0]["name"]
-
-    # nothing found
     return None
 
 
@@ -342,34 +1005,95 @@ def _get_or_create_trip_for_contact(driver_name: str, contact):
             trip = t
 
     if not trip:
-        trip = _create_new_trip_for_driver(driver_name)
+        trip = _create_new_trip_for_driver(driver_name, contact)
         _update_contact_state(contact, current_trip=trip.name)
 
     return trip
 
 
-def _create_new_trip_for_driver(driver_name: str):
-    """Create a minimal Trip; route can later be improved with Staff.default_route, etc."""
+def _create_new_trip_for_driver(driver_name: str, contact=None):
+    """Create a new Trip for this driver, using the driver's selected route if available."""
     trip = frappe.new_doc("Trip")
     trip.driver = driver_name
 
-    # Optional: Staff.default_route (Link Route)
-    default_route = frappe.db.get_value("Staff", driver_name, "default_route")
+    default_route = None
+
+    # 1) Prefer route chosen by WhatsApp bot
+    if contact and getattr(contact, "preferred_route", None):
+        default_route = contact.preferred_route
+
+    # 2) Fallback: first available Route
     if not default_route:
         default_route = frappe.db.get_value("Route", {}, "name")
 
     if default_route:
-        trip.trip_route = default_route
+        trip.trip_route = default_route  # fetch_from on Trip will fill from/to/distance/duration/avg_speed
 
+        # OPTIONAL: if you want to force-copy instead of just relying on fetch_from:
+        # route_doc = frappe.get_doc("Route", default_route)
+        # trip.from_location = route_doc.from_city
+        # trip.to_location = route_doc.to_city
+        # trip.distance = route_doc.distance
+        # trip.duration = route_doc.duration
+        # trip.avg_speed_kmph = route_doc.avg_speed_kmph
+
+    # Basic trip info
     trip.trip_status = "Scheduled"
+    trip.date = nowdate()            # Today
+    trip.departure = now_datetime()  # Now
+
+    # mobile_no & assigned_vehicle will auto-fetch from driver via fetch_froms
     trip.insert(ignore_permissions=True)
     return trip
+# def _create_new_trip_for_driver(driver_name: str, contact=None):
+#     """Create a minimal Trip; prefer contact.preferred_route or fallback to any Route."""
+#     trip = frappe.new_doc("Trip")
+#     trip.driver = driver_name
+
+#     default_route = None
+
+#     # 1) Prefer route chosen by driver via bot
+#     if contact and hasattr(contact, "preferred_route") and contact.preferred_route:
+#         default_route = contact.preferred_route
+
+#     # 2) Fallback: first Route from system
+#     if not default_route:
+#         default_route = frappe.db.get_value("Route", {}, "name")
+
+#     if default_route:
+#         trip.trip_route = default_route
+
+#     trip.trip_status = "Scheduled"
+#     trip.insert(ignore_permissions=True)
+#     return trip
+
+# def _create_new_trip_for_driver(driver_name: str):
+#     """Create a minimal Trip; route can later be improved with Staff.default_route, etc."""
+#     trip = frappe.new_doc("Trip")
+#     trip.driver = driver_name
+
+#     default_route = None
+
+#     # ✅ Only try default_route if the field exists on Staff
+#     staff_meta = frappe.get_meta("Staff")
+#     if staff_meta.has_field("default_route"):
+#         default_route = frappe.db.get_value("Staff", driver_name, "default_route")
+
+#     # Fallback: any Route
+#     if not default_route:
+#         default_route = frappe.db.get_value("Route", {}, "name")
+
+#     if default_route:
+#         trip.trip_route = default_route
+
+#     trip.trip_status = "Scheduled"
+#     trip.insert(ignore_permissions=True)
+#     return trip
 
 
 # ---------------------------------------------------------------------------
 # OCR + OCR History
 # ---------------------------------------------------------------------------
-
 def _create_ocr_history_and_run_ocr(message_doc, trip, file_url: str) -> bool:
     """
     Create OCR History row and run OCR engine.
@@ -377,7 +1101,7 @@ def _create_ocr_history_and_run_ocr(message_doc, trip, file_url: str) -> bool:
     Returns True if OCR produced usable parsed data
     (full_name + id_no + nationality).
     """
-    # find File linked to this WhatsApp Message (webhook created it)
+    # find File linked to this WhatsApp Message (created via Attach field)
     file_doc = None
     files = frappe.get_all(
         "File",
@@ -393,19 +1117,17 @@ def _create_ocr_history_and_run_ocr(message_doc, trip, file_url: str) -> bool:
         file_doc = files[0]["name"]
 
     # 1) Create OCR History shell
-    history = frappe.get_doc(
-        {
-            "doctype": "OCR History",
-            "source": "WABA Image"
-            if message_doc.content_type == "image"
-            else "WABA Document",
-            "ocr_engine": "Hybrid",  # or set dynamically later
-            "reference_doctype": "WhatsApp Message",
-            "reference_name": message_doc.name,
-            "trip": trip.name,
-            "file": file_doc,
-        }
-    )
+    history = frappe.get_doc({
+        "doctype": "OCR History",
+        # ✅ Match your new Select options
+        "source": "WhatsApp Message",
+        "ocr_engine": "Hybrid",  # or set dynamically later
+        "reference_doctype": "WhatsApp Message",
+        "reference_name": message_doc.name,
+        "trip": trip.name,
+        "file": file_doc,
+        # NOTE: we are not using waba_message field anymore
+    })
     history.insert(ignore_permissions=True)
 
     # 2) Call OCR manager
@@ -435,33 +1157,99 @@ def _create_ocr_history_and_run_ocr(message_doc, trip, file_url: str) -> bool:
     try:
         history.json_data = json.dumps(json_payload, ensure_ascii=False, indent=2)
     except Exception:
-        history.json_data = json.dumps(
-            {"_raw": str(json_payload)}, ensure_ascii=False
-        )
+        history.json_data = json.dumps({"_raw": str(json_payload)}, ensure_ascii=False)
 
     history.save(ignore_permissions=True)
 
     # Consider success only if basic fields exist
-    if history.full_name and history.id_no and history.nationality:
+    min_conf = 40  # you can tune this later
+    if history.full_name and history.id_no and (history.confidence or 0) >= min_conf:
         return True
-
+    
     return False
-
 
 # ---------------------------------------------------------------------------
 # Finalize trip & send Kashf
 # ---------------------------------------------------------------------------
 
+# def _finalize_trip_and_kashf(contact, driver_name: str, trip):
+#     """
+#     When expected_passengers == received_images (or more),
+#     fill Passengers from OCR History and send Trip PDF via WhatsApp.
+#     """
+#     expected = int(getattr(contact, "expected_passengers", 0) or 0)
+#     received = int(getattr(contact, "received_images", 0) or 0)
+
+#     if expected <= 0 or received <= 0:
+#         return
+
+#     # 1) Get OCR History rows for this Trip
+#     ocr_rows = frappe.get_all(
+#         "OCR History",
+#         filters={"trip": trip.name},
+#         fields=["name", "full_name", "id_no", "nationality"],
+#         order_by="creation asc",
+#     )
+
+#     # Only use up to expected rows
+#     ocr_rows = ocr_rows[:expected]
+
+#     # 2) Clear existing passengers? (optional)
+#     # If you want to always rebuild:
+#     # trip.set("passengers", [])
+
+#     # 3) Fill Passengers table from OCR
+#     for row in ocr_rows:
+#         passenger = trip.append("passengers", {})
+#         passenger.passenger_name = row.get("full_name") or ""
+#         passenger.idpassport_no = row.get("id_no") or ""
+#         passenger.nationality = row.get("nationality") or ""
+
+#     trip.save(ignore_permissions=True)
+#     trip.add_comment(
+#         "Info",
+#         f"Passengers auto-filled from WhatsApp OCR at {now_datetime()}."
+#     )
+
+#     # 4) Send Kashf (Trip PDF) via existing function
+#     try:
+#         send_trip_pdf_via_whatsapp(trip.name)
+#     except Exception:
+#         frappe.log_error("Kashf send failed", f"Trip: {trip.name}")
+
+#     # 5) Inform driver in 3 languages (non-thread message is OK here)
+#     sender_no = contact.whatsapp_id
+#     msg = (
+#         "✅ All passenger documents received. Your Kashf for this trip has been prepared and sent.\n"
+#         "✅ تم استلام جميع مستندات الركاب. تم تجهيز كشف الرحلة وإرساله لك.\n"
+#         "✅ تمام، سب مسافروں کے دستاویزات موصول ہوگئے۔ آپ کا سفر کا کشف تیار ہو کر بھیج دیا گیا ہے۔"
+#     )
+#     _send_plain_message(sender_no, msg)
+
+#     # 6) Reset bot state for next trip
+#     _update_contact_state(
+#         contact,
+#         bot_state="DONE",
+#         expected_passengers=0,
+#         received_images=0,
+#         # keep current_trip so you can see last trip on contact
+#     )
 def _finalize_trip_and_kashf(contact, driver_name: str, trip):
     """
     When expected_passengers == received_images (or more),
     fill Passengers from OCR History and send Trip PDF via WhatsApp.
+    Only runs when route already chosen (enforced by _maybe_finalize_trip).
     """
     expected = int(getattr(contact, "expected_passengers", 0) or 0)
     received = int(getattr(contact, "received_images", 0) or 0)
 
     if expected <= 0 or received <= 0:
         return
+
+    # 0) Apply chosen route to Trip if available
+    preferred_route = getattr(contact, "preferred_route", None)
+    if preferred_route and trip.trip_route != preferred_route:
+        trip.trip_route = preferred_route
 
     # 1) Get OCR History rows for this Trip
     ocr_rows = frappe.get_all(
@@ -474,7 +1262,7 @@ def _finalize_trip_and_kashf(contact, driver_name: str, trip):
     # Only use up to expected rows
     ocr_rows = ocr_rows[:expected]
 
-    # 2) (Optional) Clear existing passengers if you want fresh data each time:
+    # 2) (optional) clear previous passengers if you want a clean rebuild
     # trip.set("passengers", [])
 
     # 3) Fill Passengers table from OCR
@@ -486,7 +1274,8 @@ def _finalize_trip_and_kashf(contact, driver_name: str, trip):
 
     trip.save(ignore_permissions=True)
     trip.add_comment(
-        "Info", f"Passengers auto-filled from WhatsApp OCR at {now_datetime()}."
+        "Info",
+        f"Passengers auto-filled from WhatsApp OCR at {now_datetime()}."
     )
 
     # 4) Send Kashf (Trip PDF) via existing function
@@ -495,12 +1284,12 @@ def _finalize_trip_and_kashf(contact, driver_name: str, trip):
     except Exception:
         frappe.log_error("Kashf send failed", f"Trip: {trip.name}")
 
-    # 5) Inform driver in 3 languages (non-thread message is OK here)
+    # 5) Inform driver
     sender_no = contact.whatsapp_id
     msg = (
-        "✅ All passenger documents received. Your Kashf for this trip has been prepared and sent.\n"
-        "✅ تم استلام جميع مستندات الركاب. تم تجهيز كشف الرحلة وإرساله لك.\n"
-        "✅ تمام، سب مسافروں کے دستاویزات موصول ہوگئے۔ آپ کا سفر کا کشف تیار ہو کر بھیج دیا گیا ہے۔"
+        "✅ All passenger documents received, route set, and your Kashf has been prepared and sent.\n"
+        "✅ تم استلام جميع مستندات الركاب، وتثبيت خط السير، وتم تجهيز كشف الرحلة وإرساله لك.\n"
+        "✅ تمام، سب مسافروں کے دستاویزات اور روٹ سیٹ ہو گیا، آپ کا کشف تیار ہو کر بھیج دیا گیا ہے۔"
     )
     _send_plain_message(sender_no, msg)
 
@@ -512,6 +1301,23 @@ def _finalize_trip_and_kashf(contact, driver_name: str, trip):
         received_images=0,
         # keep current_trip so you can see last trip on contact
     )
+def _maybe_finalize_trip(contact, driver_name: str, trip) -> bool:
+    """
+    Check if we have enough info to finalize:
+    - expected_passengers is set
+    - received_images >= expected_passengers
+    - route chosen (preferred_route)
+    If yes → call _finalize_trip_and_kashf and return True.
+    """
+    expected = int(getattr(contact, "expected_passengers", 0) or 0)
+    received = int(getattr(contact, "received_images", 0) or 0)
+    preferred_route = getattr(contact, "preferred_route", None)
+
+    if expected > 0 and received >= expected and preferred_route:
+        _finalize_trip_and_kashf(contact, driver_name, trip)
+        return True
+
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -520,24 +1326,20 @@ def _finalize_trip_and_kashf(contact, driver_name: str, trip):
 
 def _send_thread_reply(incoming_doc, message: str):
     """Create a reply message (is_reply=1, uses incoming.message_id)."""
-    to = normalize_phone(
-        getattr(incoming_doc, "from_", "") or getattr(incoming_doc, "from", "") or ""
-    )
+    to = normalize_phone(getattr(incoming_doc, "from_", "") or getattr(incoming_doc, "from", "") or "")
     if not to:
         return
 
-    reply = frappe.get_doc(
-        {
-            "doctype": "WhatsApp Message",
-            "type": "Outgoing",
-            "to": to,
-            "content_type": "text",
-            "message": message,
-            "message_type": "Manual",
-            "is_reply": 1,
-            "reply_to_message_id": incoming_doc.message_id,
-        }
-    )
+    reply = frappe.get_doc({
+        "doctype": "WhatsApp Message",
+        "type": "Outgoing",
+        "to": to,
+        "content_type": "text",
+        "message": message,
+        "message_type": "Manual",
+        "is_reply": 1,
+        "reply_to_message_id": incoming_doc.message_id,
+    })
     reply.insert(ignore_permissions=True)
     return reply.name
 
@@ -548,1064 +1350,13 @@ def _send_plain_message(to: str, message: str):
     if not to:
         return
 
-    msg = frappe.get_doc(
-        {
-            "doctype": "WhatsApp Message",
-            "type": "Outgoing",
-            "to": to,
-            "content_type": "text",
-            "message": message,
-            "message_type": "Manual",
-        }
-    )
+    msg = frappe.get_doc({
+        "doctype": "WhatsApp Message",
+        "type": "Outgoing",
+        "to": to,
+        "content_type": "text",
+        "message": message,
+        "message_type": "Manual",
+    })
     msg.insert(ignore_permissions=True)
     return msg.name
-
-# import json
-# import frappe
-# from frappe.utils import now_datetime
-
-# from tms.utils.whatsapp_utils import (
-#     normalize_phone,
-#     get_or_create_contact,
-#     send_trip_pdf_via_whatsapp,
-# )
-
-
-# # ---------------------------------------------------------------------------
-# # Entry point: after_insert on WhatsApp Message
-# # ---------------------------------------------------------------------------
-
-# def handle_incoming_whatsapp(doc, event=None):
-#     """Hook: called on after_insert of WhatsApp Message."""
-#     # only care about Incoming
-#     if doc.type != "Incoming":
-#         return
-
-#     content_type = (doc.content_type or "").lower()
-
-#     # sender info
-#     sender_no = normalize_phone(getattr(doc, "from_", "") or getattr(doc, "from", "") or "")
-#     profile_name = (doc.profile_name or "").strip()
-
-#     # ensure contact row exists
-#     contact = get_or_create_contact(sender_no, profile_name)
-
-#     if content_type == "text":
-#         _handle_text_message(doc, contact)
-#     elif content_type in ("image", "document"):
-#         _handle_media_message(doc, contact)
-#     else:
-#         # ignore reactions, buttons, etc for now
-#         return
-
-
-# # ---------------------------------------------------------------------------
-# # Contact helpers
-# # ---------------------------------------------------------------------------
-
-# def _update_contact_state(contact, **kwargs):
-#     """Update WhatsApp Contact fields safely."""
-#     if not contact:
-#         return
-
-#     dirty = False
-#     for field, value in kwargs.items():
-#         # Frappe will error if field doesn't exist – user must create fields in DocType
-#         if hasattr(contact, field):
-#             setattr(contact, field, value)
-#             dirty = True
-
-#     if dirty:
-#         contact.save(ignore_permissions=True)
-
-
-# # ---------------------------------------------------------------------------
-# # Text handler (passenger count)
-# # ---------------------------------------------------------------------------
-
-# def _handle_text_message(doc, contact):
-#     """Handle incoming text based on contact.bot_state."""
-#     if not contact:
-#         return
-
-#     state = (getattr(contact, "bot_state", "") or "").upper()
-#     text = (doc.message or "").strip()
-
-#     # Only one state for now: expecting passenger count
-#     if state == "ASKED_PASSENGERS":
-#         num = _extract_int(text)
-#         if not num or num <= 0:
-#             msg = (
-#                 "Please send only the number of passengers.\n"
-#                 "من فضلك أرسل عدد الركاب كرقم فقط.\n"
-#                 "براہ کرم صرف مسافروں کی تعداد نمبر میں بھیجیں۔"
-#             )
-#             _send_thread_reply(doc, msg)
-#             return
-
-#         # Set expected_passengers & move to COLLECTING_DOCS
-#         received = int(getattr(contact, "received_images", 0) or 0)
-#         _update_contact_state(
-#             contact,
-#             expected_passengers=num,
-#             bot_state="COLLECTING_DOCS",
-#         )
-
-#         # If already received some docs, inform status
-#         remaining = max(num - received, 0)
-
-#         if received == 0:
-#             msg = (
-#                 f"✅ Got it. You said {num} passengers.\n"
-#                 f"Please send {num} clear images or PDFs (Iqama / Passport / Visa / Nusuk), "
-#                 f"one document per passenger.\n\n"
-#                 f"✅ تم التأكيد. عدد الركاب {num}.\n"
-#                 f"من فضلك أرسل {num} صورًا أو ملفات PDF واضحة (إقامة / جواز سفر / تأشيرة / نسك)، "
-#                 f"لكل راكب مستند واحد.\n\n"
-#                 f"✅ ٹھیک ہے، آپ نے {num} مسافروں کا بتایا ہے۔\n"
-#                 f"براہ کرم {num} صاف تصویریں یا پی ڈی ایف بھیجیں (اقامہ / پاسپورٹ / ویزا / نسک)، "
-#                 f"ہر مسافر کے لیے ایک دستاویز۔"
-#             )
-#         elif remaining > 0:
-#             msg = (
-#                 f"✅ I registered {num} passengers.\n"
-#                 f"I already received {received} document(s). "
-#                 f"Please send remaining {remaining} document(s).\n\n"
-#                 f"✅ تم تسجيل {num} ركاب.\n"
-#                 f"تم استلام {received} مستند(ات) حتى الآن. "
-#                 f"من فضلك أرسل باقي {remaining} مستند(ات).\n\n"
-#                 f"✅ {num} مسافروں کا اندراج ہوگیا ہے۔\n"
-#                 f"اب تک {received} دستاویزات موصول ہو چکی ہیں۔ "
-#                 f"براہ کرم باقی {remaining} دستاویز بھیجیں۔"
-#             )
-#         else:
-#             # already have enough docs → finalize immediately
-#             sender_no = contact.whatsapp_id
-#             driver_name = _find_driver_by_phone(sender_no)
-#             trip = _get_or_create_trip_for_contact(driver_name, contact)
-#             _finalize_trip_and_kashf(contact, driver_name, trip)
-#             # no extra message here; finalize function will send
-
-#             return
-
-#         _send_thread_reply(doc, msg)
-
-#     # other states ignored for now
-#     return
-
-
-# def _extract_int(text: str) -> int | None:
-#     """Extract first integer from text."""
-#     digits = ""
-#     for ch in text:
-#         if ch.isdigit():
-#             digits += ch
-#         elif digits:
-#             break
-#     if not digits:
-#         return None
-#     try:
-#         return int(digits)
-#     except Exception:
-#         return None
-
-
-# # ---------------------------------------------------------------------------
-# # Media handler (image / doc)
-# # ---------------------------------------------------------------------------
-
-# def _handle_media_message(doc, contact):
-#     """Handle incoming image or PDF (WABA Document)."""
-#     if not contact:
-#         return
-
-#     sender_no = normalize_phone(getattr(doc, "from_", "") or getattr(doc, "from", "") or "")
-#     if not sender_no:
-#         return
-
-#     # 1) Resolve driver (Staff.mobile_no)
-#     driver_name = _find_driver_by_phone(sender_no)
-#     if not driver_name:
-#         _send_thread_reply(
-#             doc,
-#             "⚠️ Your number is not registered as a driver in the system.\n"
-#             "⚠️ رقمك غير مسجل كسائق في النظام.\n"
-#             "⚠️ آپ کا نمبر سسٹم میں ڈرائیور کے طور پر رجسٹر نہیں ہے۔"
-#         )
-#         return
-
-#     # 2) Get or create Trip bound to this contact
-#     trip = _get_or_create_trip_for_contact(driver_name, contact)
-
-#     # 3) Get file_url from WhatsApp Message.attach (created by webhook)
-#     file_url = (doc.attach or "").strip()
-#     if not file_url:
-#         _send_thread_reply(
-#             doc,
-#             "🕐 I received your message, but no document/image was attached.\n"
-#             "🕐 تم استلام رسالتك، لكن لا يوجد مستند أو صورة مرفقة.\n"
-#             "🕐 میسج ملا لیکن کوئی تصویر یا دستاویز منسلک نہیں تھی۔"
-#         )
-#         return
-
-#     # 4) Run OCR + create OCR History record
-#     ocr_ok = _create_ocr_history_and_run_ocr(doc, trip, file_url)
-
-#     if not ocr_ok:
-#         # do NOT increment received_images, ask to resend this image
-#         msg = (
-#             "⚠️ This document image is not clear, please send a new clearer image.\n"
-#             "⚠️ صورة هذا المستند غير واضحة، من فضلك أرسل صورة أوضح.\n"
-#             "⚠️ اس دستاویز کی تصویر واضح نہیں ہے، براہ کرم نئی صاف تصویر بھیجیں۔"
-#         )
-#         _send_thread_reply(doc, msg)
-#         return
-
-#     # 5) Increment received_images
-#     received = int(getattr(contact, "received_images", 0) or 0) + 1
-#     expected = int(getattr(contact, "expected_passengers", 0) or 0)
-
-#     # If we never asked passenger count yet, ask now (but keep received counter)
-#     if expected <= 0 and (getattr(contact, "bot_state", "") or "").upper() not in ("ASKED_PASSENGERS", "COLLECTING_DOCS"):
-#         _update_contact_state(contact, received_images=received, bot_state="ASKED_PASSENGERS")
-
-#         msg = (
-#             "🧾 I received your document.\n"
-#             "How many passengers are going on this trip?\n\n"
-#             "🧾 تم استلام مستندك.\n"
-#             "كم عدد الركاب في هذه الرحلة؟\n\n"
-#             "🧾 آپ کی دستاویز موصول ہوگئی ہے۔\n"
-#             "اس سفر پر کتنے مسافر جائیں گے؟"
-#         )
-#         _send_thread_reply(doc, msg)
-#         return
-
-#     # If expected already known, update state and inform
-#     _update_contact_state(contact, received_images=received, bot_state="COLLECTING_DOCS")
-
-#     if expected > 0:
-#         if received < expected:
-#             msg = (
-#                 f"✅ Document {received}/{expected} received.\n"
-#                 f"Please send the remaining {expected - received} document(s).\n\n"
-#                 f"✅ تم استلام المستند رقم {received} من {expected}.\n"
-#                 f"من فضلك أرسل باقي {expected - received} مستند(ات).\n\n"
-#                 f"✅ {received}/{expected} دستاویز موصول ہو گئی ہے۔\n"
-#                 f"براہ کرم باقی {expected - received} دستاویز بھیج دیں۔"
-#             )
-#             _send_thread_reply(doc, msg)
-#         elif received == expected:
-#             _finalize_trip_and_kashf(contact, driver_name, trip)
-#         else:  # received > expected
-#             msg = (
-#                 f"ℹ️ You sent {received} documents, but expected {expected}.\n"
-#                 f"We will process the first {expected} documents.\n\n"
-#                 f"ℹ️ أرسلت {received} مستندات بينما العدد المتوقع {expected}.\n"
-#                 f"سيتم معالجة أول {expected} مستندات.\n\n"
-#                 f"ℹ️ آپ نے {received} دستاویزات بھیجیں، جبکہ متوقع {expected} تھیں۔\n"
-#                 f"پہلی {expected} دستاویزات پر عمل ہوگا۔"
-#             )
-#             _send_thread_reply(doc, msg)
-
-
-# # ---------------------------------------------------------------------------
-# # Driver & Trip helpers
-# # ---------------------------------------------------------------------------
-
-# def _find_driver_by_phone(phone: str):
-#     """Resolve Staff from WhatsApp number."""
-#     phone = normalize_phone(phone)
-#     candidates = {phone}
-
-#     if phone.startswith("+"):
-#         candidates.add(phone[1:])
-#     if phone.startswith("00"):
-#         candidates.add(phone[2:])
-
-#     # you can add more normalization if needed
-
-#     return frappe.db.get_value(
-#         "Staff",
-#         {"mobile_no": ["in", list(candidates)]},
-#         "name",
-#     )
-
-
-# def _get_or_create_trip_for_contact(driver_name: str, contact):
-#     """
-#     If contact.current_trip is active (Scheduled/Departed) -> reuse.
-#     Otherwise create new Trip for this driver and link to contact.current_trip.
-#     """
-#     trip = None
-#     current_trip_name = getattr(contact, "current_trip", None)
-
-#     if current_trip_name and frappe.db.exists("Trip", current_trip_name):
-#         t = frappe.get_doc("Trip", current_trip_name)
-#         if t.trip_status in ("Scheduled", "Departed"):
-#             trip = t
-
-#     if not trip:
-#         trip = _create_new_trip_for_driver(driver_name)
-#         _update_contact_state(contact, current_trip=trip.name)
-
-#     return trip
-
-
-# def _create_new_trip_for_driver(driver_name: str):
-#     """Create a minimal Trip; route can later be improved with Staff.default_route, etc."""
-#     trip = frappe.new_doc("Trip")
-#     trip.driver = driver_name
-
-#     # Optional: Staff.default_route (Link Route)
-#     default_route = frappe.db.get_value("Staff", driver_name, "default_route")
-#     if not default_route:
-#         default_route = frappe.db.get_value("Route", {}, "name")
-
-#     if default_route:
-#         trip.trip_route = default_route
-
-#     trip.trip_status = "Scheduled"
-#     trip.insert(ignore_permissions=True)
-#     return trip
-
-
-# # ---------------------------------------------------------------------------
-# # OCR + OCR History
-# # ---------------------------------------------------------------------------
-
-# def _create_ocr_history_and_run_ocr(message_doc, trip, file_url: str) -> bool:
-#     """
-#     Create OCR History row and run OCR engine.
-
-#     Returns True if OCR produced usable parsed data
-#     (full_name + id_no + nationality).
-#     """
-#     # find File linked to this WhatsApp Message (webhook created it)
-#     file_doc = None
-#     files = frappe.get_all(
-#         "File",
-#         filters={
-#             "attached_to_doctype": "WhatsApp Message",
-#             "attached_to_name": message_doc.name,
-#         },
-#         fields=["name"],
-#         order_by="creation desc",
-#         limit=1,
-#     )
-#     if files:
-#         file_doc = files[0]["name"]
-
-#     # 1) Create OCR History shell
-#     history = frappe.get_doc({
-#         "doctype": "OCR History",
-#         "source": "WABA Image" if message_doc.content_type == "image" else "WABA Document",
-#         "ocr_engine": "Hybrid",  # or set dynamically later
-#         "reference_doctype": "WhatsApp Message",
-#         "reference_name": message_doc.name,
-#         "trip": trip.name,
-#         "file": file_doc,
-#     })
-#     history.insert(ignore_permissions=True)
-
-#     # 2) Call OCR manager
-#     try:
-#         from tms.utils.ocr_manager import analyze_id_document
-#     except ImportError:
-#         # no OCR handler yet
-#         return False
-
-#     try:
-#         result = analyze_id_document(file_url=file_url)
-#     except Exception:
-#         return False
-
-#     if not isinstance(result, dict):
-#         return False
-
-#     # expected keys: full_name, id_no, nationality, raw_text, fixed_text, confidence, json_data
-#     history.full_name = result.get("full_name") or ""
-#     history.id_no = result.get("id_no") or ""
-#     history.nationality = result.get("nationality") or ""
-#     history.raw_text = result.get("raw_text") or ""
-#     history.fixed_text = result.get("fixed_text") or ""
-#     history.confidence = result.get("confidence") or 0
-
-#     json_payload = result.get("json_data") or {}
-#     try:
-#         history.json_data = json.dumps(json_payload, ensure_ascii=False, indent=2)
-#     except Exception:
-#         history.json_data = json.dumps({"_raw": str(json_payload)}, ensure_ascii=False)
-
-#     history.save(ignore_permissions=True)
-
-#     # Consider success only if basic fields exist
-#     if history.full_name and history.id_no and history.nationality:
-#         return True
-
-#     return False
-
-
-# # ---------------------------------------------------------------------------
-# # Finalize trip & send Kashf
-# # ---------------------------------------------------------------------------
-
-# def _finalize_trip_and_kashf(contact, driver_name: str, trip):
-#     """
-#     When expected_passengers == received_images (or more),
-#     fill Passengers from OCR History and send Trip PDF via WhatsApp.
-#     """
-#     expected = int(getattr(contact, "expected_passengers", 0) or 0)
-#     received = int(getattr(contact, "received_images", 0) or 0)
-
-#     if expected <= 0 or received <= 0:
-#         return
-
-#     # 1) Get OCR History rows for this Trip
-#     ocr_rows = frappe.get_all(
-#         "OCR History",
-#         filters={"trip": trip.name},
-#         fields=["name", "full_name", "id_no", "nationality"],
-#         order_by="creation asc",
-#     )
-
-#     # Only use up to expected rows
-#     ocr_rows = ocr_rows[:expected]
-
-#     # 2) Clear existing passengers? (optional)
-#     # If you want to always rebuild:
-#     # trip.set("passengers", [])
-
-#     # 3) Fill Passengers table from OCR
-#     for row in ocr_rows:
-#         passenger = trip.append("passengers", {})
-#         passenger.passenger_name = row.get("full_name") or ""
-#         passenger.idpassport_no = row.get("id_no") or ""
-#         passenger.nationality = row.get("nationality") or ""
-
-#     trip.save(ignore_permissions=True)
-#     trip.add_comment(
-#         "Info",
-#         f"Passengers auto-filled from WhatsApp OCR at {now_datetime()}."
-#     )
-
-#     # 4) Send Kashf (Trip PDF) via existing function
-#     try:
-#         send_trip_pdf_via_whatsapp(trip.name)
-#     except Exception:
-#         frappe.log_error("Kashf send failed", f"Trip: {trip.name}")
-
-#     # 5) Inform driver in 3 languages (non-thread message is OK here)
-#     sender_no = contact.whatsapp_id
-#     msg = (
-#         "✅ All passenger documents received. Your Kashf for this trip has been prepared and sent.\n"
-#         "✅ تم استلام جميع مستندات الركاب. تم تجهيز كشف الرحلة وإرساله لك.\n"
-#         "✅ تمام، سب مسافروں کے دستاویزات موصول ہوگئے۔ آپ کا سفر کا کشف تیار ہو کر بھیج دیا گیا ہے۔"
-#     )
-#     _send_plain_message(sender_no, msg)
-
-#     # 6) Reset bot state for next trip
-#     _update_contact_state(
-#         contact,
-#         bot_state="DONE",
-#         expected_passengers=0,
-#         received_images=0,
-#         # keep current_trip so you can see last trip on contact
-#     )
-
-
-# # ---------------------------------------------------------------------------
-# # WhatsApp send helpers (local)
-# # ---------------------------------------------------------------------------
-
-# def _send_thread_reply(incoming_doc, message: str):
-#     """Create a reply message (is_reply=1, uses incoming.message_id)."""
-#     to = normalize_phone(getattr(incoming_doc, "from_", "") or getattr(incoming_doc, "from", "") or "")
-#     if not to:
-#         return
-
-#     reply = frappe.get_doc({
-#         "doctype": "WhatsApp Message",
-#         "type": "Outgoing",
-#         "to": to,
-#         "content_type": "text",
-#         "message": message,
-#         "message_type": "Manual",
-#         "is_reply": 1,
-#         "reply_to_message_id": incoming_doc.message_id,
-#     })
-#     reply.insert(ignore_permissions=True)
-#     return reply.name
-
-
-# def _send_plain_message(to: str, message: str):
-#     """Non-thread text message (for final Kashf notification)."""
-#     to = normalize_phone(to)
-#     if not to:
-#         return
-
-#     msg = frappe.get_doc({
-#         "doctype": "WhatsApp Message",
-#         "type": "Outgoing",
-#         "to": to,
-#         "content_type": "text",
-#         "message": message,
-#         "message_type": "Manual",
-#     })
-#     msg.insert(ignore_permissions=True)
-#     return msg.name
-
-# import json
-# import frappe
-# from frappe.utils import now_datetime
-
-# from tms.utils.whatsapp_utils import (
-#     normalize_phone,
-#     get_or_create_contact,
-#     send_trip_pdf_via_whatsapp,
-# )
-
-
-# # ---------------------------------------------------------------------------
-# # Entry point: after_insert on WhatsApp Message
-# # ---------------------------------------------------------------------------
-
-# def handle_incoming_whatsapp(doc, event=None):
-#     """Hook: called on after_insert of WhatsApp Message."""
-#     # only care about Incoming
-#     if doc.type != "Incoming":
-#         return
-
-#     content_type = (doc.content_type or "").lower()
-
-#     # sender info
-#     sender_no = normalize_phone(getattr(doc, "from_", "") or getattr(doc, "from", "") or "")
-#     profile_name = (doc.profile_name or "").strip()
-
-#     # ensure contact row exists
-#     contact = get_or_create_contact(sender_no, profile_name)
-
-#     if content_type == "text":
-#         _handle_text_message(doc, contact)
-#     elif content_type in ("image", "document"):
-#         _handle_media_message(doc, contact)
-#     else:
-#         # ignore reactions, buttons, etc for now
-#         return
-
-
-# # ---------------------------------------------------------------------------
-# # Contact helpers
-# # ---------------------------------------------------------------------------
-
-# def _update_contact_state(contact, **kwargs):
-#     """Update WhatsApp Contact fields safely."""
-#     if not contact:
-#         return
-
-#     dirty = False
-#     for field, value in kwargs.items():
-#         # Frappe will error if field doesn't exist – user must create fields in DocType
-#         if hasattr(contact, field):
-#             setattr(contact, field, value)
-#             dirty = True
-
-#     if dirty:
-#         contact.save(ignore_permissions=True)
-
-
-# # ---------------------------------------------------------------------------
-# # Text handler (passenger count)
-# # ---------------------------------------------------------------------------
-
-# def _handle_text_message(doc, contact):
-#     """Handle incoming text based on contact.bot_state."""
-#     if not contact:
-#         return
-
-#     state = (getattr(contact, "bot_state", "") or "").upper()
-#     text = (doc.message or "").strip()
-
-#     # Only one state for now: expecting passenger count
-#     if state == "ASKED_PASSENGERS":
-#         num = _extract_int(text)
-#         if not num or num <= 0:
-#             msg = (
-#                 "Please send only the number of passengers.\n"
-#                 "من فضلك أرسل عدد الركاب كرقم فقط.\n"
-#                 "براہ کرم صرف مسافروں کی تعداد نمبر میں بھیجیں۔"
-#             )
-#             _send_thread_reply(doc, msg)
-#             return
-
-#         # Set expected_passengers & move to COLLECTING_DOCS
-#         received = int(getattr(contact, "received_images", 0) or 0)
-#         _update_contact_state(
-#             contact,
-#             expected_passengers=num,
-#             bot_state="COLLECTING_DOCS",
-#         )
-
-#         # If already received some docs, inform status
-#         remaining = max(num - received, 0)
-
-#         if received == 0:
-#             msg = (
-#                 f"✅ Got it. You said {num} passengers.\n"
-#                 f"Please send {num} clear images or PDFs (Iqama / Passport / Visa / Nusuk), "
-#                 f"one document per passenger.\n\n"
-#                 f"✅ تم التأكيد. عدد الركاب {num}.\n"
-#                 f"من فضلك أرسل {num} صورًا أو ملفات PDF واضحة (إقامة / جواز سفر / تأشيرة / نسك)، "
-#                 f"لكل راكب مستند واحد.\n\n"
-#                 f"✅ ٹھیک ہے، آپ نے {num} مسافروں کا بتایا ہے۔\n"
-#                 f"براہ کرم {num} صاف تصویریں یا پی ڈی ایف بھیجیں (اقامہ / پاسپورٹ / ویزا / نسک)، "
-#                 f"ہر مسافر کے لیے ایک دستاویز۔"
-#             )
-#         elif remaining > 0:
-#             msg = (
-#                 f"✅ I registered {num} passengers.\n"
-#                 f"I already received {received} document(s). "
-#                 f"Please send remaining {remaining} document(s).\n\n"
-#                 f"✅ تم تسجيل {num} ركاب.\n"
-#                 f"تم استلام {received} مستند(ات) حتى الآن. "
-#                 f"من فضلك أرسل باقي {remaining} مستند(ات).\n\n"
-#                 f"✅ {num} مسافروں کا اندراج ہوگیا ہے۔\n"
-#                 f"اب تک {received} دستاویزات موصول ہو چکی ہیں۔ "
-#                 f"براہ کرم باقی {remaining} دستاویز بھیجیں۔"
-#             )
-#         else:
-#             # already have enough docs → finalize immediately
-#             sender_no = contact.whatsapp_id
-#             driver_name = _find_driver_by_phone(sender_no)
-#             trip = _get_or_create_trip_for_contact(driver_name, contact)
-#             _finalize_trip_and_kashf(contact, driver_name, trip)
-#             # no extra message here; finalize function will send
-
-#             return
-
-#         _send_thread_reply(doc, msg)
-
-#     # other states ignored for now
-#     return
-
-
-# def _extract_int(text: str) -> int | None:
-#     """Extract first integer from text."""
-#     digits = ""
-#     for ch in text:
-#         if ch.isdigit():
-#             digits += ch
-#         elif digits:
-#             break
-#     if not digits:
-#         return None
-#     try:
-#         return int(digits)
-#     except Exception:
-#         return None
-
-
-# # ---------------------------------------------------------------------------
-# # Media handler (image / doc)
-# # ---------------------------------------------------------------------------
-
-# def _handle_media_message(doc, contact):
-#     """Handle incoming image or PDF (WABA Document)."""
-#     if not contact:
-#         return
-
-#     sender_no = normalize_phone(getattr(doc, "from_", "") or getattr(doc, "from", "") or "")
-#     if not sender_no:
-#         return
-
-#     # 1) Resolve driver (Staff.mobile_no)
-#     driver_name = _find_driver_by_phone(sender_no)
-#     if not driver_name:
-#         _send_thread_reply(
-#             doc,
-#             "⚠️ Your number is not registered as a driver in the system.\n"
-#             "⚠️ رقمك غير مسجل كسائق في النظام.\n"
-#             "⚠️ آپ کا نمبر سسٹم میں ڈرائیور کے طور پر رجسٹر نہیں ہے۔"
-#         )
-#         return
-
-#     # 2) Get or create Trip bound to this contact
-#     trip = _get_or_create_trip_for_contact(driver_name, contact)
-
-#     # 3) Get file_url from WhatsApp Message.attach (created by webhook)
-#     file_url = (doc.attach or "").strip()
-#     if not file_url:
-#         _send_thread_reply(
-#             doc,
-#             "🕐 I received your message, but no document/image was attached.\n"
-#             "🕐 تم استلام رسالتك، لكن لا يوجد مستند أو صورة مرفقة.\n"
-#             "🕐 میسج ملا لیکن کوئی تصویر یا دستاویز منسلک نہیں تھی۔"
-#         )
-#         return
-
-#     # 4) Run OCR + create OCR History record
-#     ocr_ok = _create_ocr_history_and_run_ocr(doc, trip, file_url)
-
-#     if not ocr_ok:
-#         # do NOT increment received_images, ask to resend this image
-#         msg = (
-#             "⚠️ This document image is not clear, please send a new clearer image.\n"
-#             "⚠️ صورة هذا المستند غير واضحة، من فضلك أرسل صورة أوضح.\n"
-#             "⚠️ اس دستاویز کی تصویر واضح نہیں ہے، براہ کرم نئی صاف تصویر بھیجیں۔"
-#         )
-#         _send_thread_reply(doc, msg)
-#         return
-
-#     # 5) Increment received_images
-#     received = int(getattr(contact, "received_images", 0) or 0) + 1
-#     expected = int(getattr(contact, "expected_passengers", 0) or 0)
-
-#     # If we never asked passenger count yet, ask now (but keep received counter)
-#     if expected <= 0 and (getattr(contact, "bot_state", "") or "").upper() not in ("ASKED_PASSENGERS", "COLLECTING_DOCS"):
-#         _update_contact_state(contact, received_images=received, bot_state="ASKED_PASSENGERS")
-
-#         msg = (
-#             "🧾 I received your document.\n"
-#             "How many passengers are going on this trip?\n\n"
-#             "🧾 تم استلام مستندك.\n"
-#             "كم عدد الركاب في هذه الرحلة؟\n\n"
-#             "🧾 آپ کی دستاویز موصول ہوگئی ہے۔\n"
-#             "اس سفر پر کتنے مسافر جائیں گے؟"
-#         )
-#         _send_thread_reply(doc, msg)
-#         return
-
-#     # If expected already known, update state and inform
-#     _update_contact_state(contact, received_images=received, bot_state="COLLECTING_DOCS")
-
-#     if expected > 0:
-#         if received < expected:
-#             msg = (
-#                 f"✅ Document {received}/{expected} received.\n"
-#                 f"Please send the remaining {expected - received} document(s).\n\n"
-#                 f"✅ تم استلام المستند رقم {received} من {expected}.\n"
-#                 f"من فضلك أرسل باقي {expected - received} مستند(ات).\n\n"
-#                 f"✅ {received}/{expected} دستاویز موصول ہو گئی ہے۔\n"
-#                 f"براہ کرم باقی {expected - received} دستاویز بھیج دیں۔"
-#             )
-#             _send_thread_reply(doc, msg)
-#         elif received == expected:
-#             _finalize_trip_and_kashf(contact, driver_name, trip)
-#         else:  # received > expected
-#             msg = (
-#                 f"ℹ️ You sent {received} documents, but expected {expected}.\n"
-#                 f"We will process the first {expected} documents.\n\n"
-#                 f"ℹ️ أرسلت {received} مستندات بينما العدد المتوقع {expected}.\n"
-#                 f"سيتم معالجة أول {expected} مستندات.\n\n"
-#                 f"ℹ️ آپ نے {received} دستاویزات بھیجیں، جبکہ متوقع {expected} تھیں۔\n"
-#                 f"پہلی {expected} دستاویزات پر عمل ہوگا۔"
-#             )
-#             _send_thread_reply(doc, msg)
-
-
-# # ---------------------------------------------------------------------------
-# # Driver & Trip helpers
-# # ---------------------------------------------------------------------------
-
-# def _digits_only(phone: str) -> str:
-#     """Keep only digits, used for loose 'endswith' matching."""
-#     return "".join(ch for ch in (phone or "") if ch.isdigit())
-
-
-# def _find_driver_by_phone(phone: str):
-#     """
-#     Resolve *Staff* record for a real driver from WhatsApp number.
-
-#     Rule:
-#       - Find Staff by phone (mobile_no OR cell_number)
-#       - Then check if this Staff is linked to a Driver
-#         (Driver.staff or Driver.employee)
-#       - Only then treat as valid driver.
-#     """
-#     if not phone:
-#         return None
-
-#     raw = normalize_phone(phone)
-#     digits = _digits_only(raw)
-#     if not digits:
-#         return None
-
-#     # We match last 9–12 digits to be tolerant (+966 / 00966 etc.)
-#     candidates = set()
-#     for n in range(9, 13):
-#         if len(digits) >= n:
-#             candidates.add(digits[-n:])
-
-#     def _like_any(doctype: str, fieldname: str):
-#         """Return first row where field LIKE %tail for any candidate."""
-#         for tail in sorted(candidates, key=len, reverse=True):
-#             rows = frappe.get_all(
-#                 doctype,
-#                 filters={fieldname: ["like", f"%{tail}"]},
-#                 fields=["name", fieldname],
-#                 limit=1,
-#             )
-#             if rows:
-#                 return rows[0]
-#         return None
-
-#     # --- 1) Find Staff by mobile_no OR cell_number ---
-#     staff_row = _like_any("Staff", "mobile_no")
-#     if not staff_row:
-#         staff_row = _like_any("Staff", "cell_number")
-
-#     if not staff_row:
-#         # no staff with this phone at all
-#         return None
-
-#     staff_name = staff_row["name"]
-
-#     # --- 2) Check if this Staff is linked to a Driver record ---
-#     if not frappe.db.exists("DocType", "Driver"):
-#         # if you *require* core Driver as well, then treat as NOT driver
-#         return None
-
-#     # Try Driver.staff link
-#     driver_name = frappe.db.get_value(
-#         "Driver",
-#         {"staff": staff_name},
-#         "name",
-#     )
-
-#     # or Driver.employee link (depending on your customization)
-#     if not driver_name:
-#         driver_name = frappe.db.get_value(
-#             "Driver",
-#             {"employee": staff_name},
-#             "name",
-#         )
-
-#     if not driver_name:
-#         # Staff exists, but no linked Driver record → not a driver yet
-#         return None
-
-#     # ✅ OK: this WhatsApp number belongs to Staff that has a Driver record
-#     return staff_name
-
-# def _get_or_create_trip_for_contact(driver_name: str, contact):
-#     """
-#     If contact.current_trip is active (Scheduled/Departed) -> reuse.
-#     Otherwise create new Trip for this driver and link to contact.current_trip.
-#     """
-#     trip = None
-#     current_trip_name = getattr(contact, "current_trip", None)
-
-#     if current_trip_name and frappe.db.exists("Trip", current_trip_name):
-#         t = frappe.get_doc("Trip", current_trip_name)
-#         if t.trip_status in ("Scheduled", "Departed"):
-#             trip = t
-
-#     if not trip:
-#         trip = _create_new_trip_for_driver(driver_name)
-#         _update_contact_state(contact, current_trip=trip.name)
-
-#     return trip
-
-
-# def _create_new_trip_for_driver(driver_name: str):
-#     """Create a minimal Trip; route can later be improved with Staff.default_route, etc."""
-#     trip = frappe.new_doc("Trip")
-#     trip.driver = driver_name
-
-#     # Optional: Staff.default_route (Link Route)
-#     default_route = frappe.db.get_value("Staff", driver_name, "default_route")
-#     if not default_route:
-#         default_route = frappe.db.get_value("Route", {}, "name")
-
-#     if default_route:
-#         trip.trip_route = default_route
-
-#     trip.trip_status = "Scheduled"
-#     trip.insert(ignore_permissions=True)
-#     return trip
-
-
-# # ---------------------------------------------------------------------------
-# # OCR + OCR History
-# # ---------------------------------------------------------------------------
-
-# def _create_ocr_history_and_run_ocr(message_doc, trip, file_url: str) -> bool:
-#     """
-#     Create OCR History row and run OCR engine.
-
-#     Returns True if OCR produced usable parsed data
-#     (full_name + id_no + nationality).
-#     """
-#     # find File linked to this WhatsApp Message (webhook created it)
-#     file_doc = None
-#     files = frappe.get_all(
-#         "File",
-#         filters={
-#             "attached_to_doctype": "WhatsApp Message",
-#             "attached_to_name": message_doc.name,
-#         },
-#         fields=["name"],
-#         order_by="creation desc",
-#         limit=1,
-#     )
-#     if files:
-#         file_doc = files[0]["name"]
-
-#     # 1) Create OCR History shell
-#     history = frappe.get_doc({
-#         "doctype": "OCR History",
-#         "source": "WABA Image" if message_doc.content_type == "image" else "WABA Document",
-#         "ocr_engine": "Hybrid",  # or set dynamically later
-#         "reference_doctype": "WhatsApp Message",
-#         "reference_name": message_doc.name,
-#         "trip": trip.name,
-#         "file": file_doc,
-#     })
-#     history.insert(ignore_permissions=True)
-
-#     # 2) Call OCR manager
-#     try:
-#         from tms.utils.ocr_manager import analyze_id_document
-#     except ImportError:
-#         # no OCR handler yet
-#         return False
-
-#     try:
-#         result = analyze_id_document(file_url=file_url)
-#     except Exception:
-#         return False
-
-#     if not isinstance(result, dict):
-#         return False
-
-#     # expected keys: full_name, id_no, nationality, raw_text, fixed_text, confidence, json_data
-#     history.full_name = result.get("full_name") or ""
-#     history.id_no = result.get("id_no") or ""
-#     history.nationality = result.get("nationality") or ""
-#     history.raw_text = result.get("raw_text") or ""
-#     history.fixed_text = result.get("fixed_text") or ""
-#     history.confidence = result.get("confidence") or 0
-
-#     json_payload = result.get("json_data") or {}
-#     try:
-#         history.json_data = json.dumps(json_payload, ensure_ascii=False, indent=2)
-#     except Exception:
-#         history.json_data = json.dumps({"_raw": str(json_payload)}, ensure_ascii=False)
-
-#     history.save(ignore_permissions=True)
-
-#     # Consider success only if basic fields exist
-#     if history.full_name and history.id_no and history.nationality:
-#         return True
-
-#     return False
-
-
-# # ---------------------------------------------------------------------------
-# # Finalize trip & send Kashf
-# # ---------------------------------------------------------------------------
-
-# def _finalize_trip_and_kashf(contact, driver_name: str, trip):
-#     """
-#     When expected_passengers == received_images (or more),
-#     fill Passengers from OCR History and send Trip PDF via WhatsApp.
-#     """
-#     expected = int(getattr(contact, "expected_passengers", 0) or 0)
-#     received = int(getattr(contact, "received_images", 0) or 0)
-
-#     if expected <= 0 or received <= 0:
-#         return
-
-#     # 1) Get OCR History rows for this Trip
-#     ocr_rows = frappe.get_all(
-#         "OCR History",
-#         filters={"trip": trip.name},
-#         fields=["name", "full_name", "id_no", "nationality"],
-#         order_by="creation asc",
-#     )
-
-#     # Only use up to expected rows
-#     ocr_rows = ocr_rows[:expected]
-
-#     # 2) Clear existing passengers? (optional)
-#     # If you want to always rebuild:
-#     # trip.set("passengers", [])
-
-#     # 3) Fill Passengers table from OCR
-#     for row in ocr_rows:
-#         passenger = trip.append("passengers", {})
-#         passenger.passenger_name = row.get("full_name") or ""
-#         passenger.idpassport_no = row.get("id_no") or ""
-#         passenger.nationality = row.get("nationality") or ""
-
-#     trip.save(ignore_permissions=True)
-#     trip.add_comment(
-#         "Info",
-#         f"Passengers auto-filled from WhatsApp OCR at {now_datetime()}."
-#     )
-
-#     # 4) Send Kashf (Trip PDF) via existing function
-#     try:
-#         send_trip_pdf_via_whatsapp(trip.name)
-#     except Exception:
-#         frappe.log_error("Kashf send failed", f"Trip: {trip.name}")
-
-#     # 5) Inform driver in 3 languages (non-thread message is OK here)
-#     sender_no = contact.whatsapp_id
-#     msg = (
-#         "✅ All passenger documents received. Your Kashf for this trip has been prepared and sent.\n"
-#         "✅ تم استلام جميع مستندات الركاب. تم تجهيز كشف الرحلة وإرساله لك.\n"
-#         "✅ تمام، سب مسافروں کے دستاویزات موصول ہوگئے۔ آپ کا سفر کا کشف تیار ہو کر بھیج دیا گیا ہے۔"
-#     )
-#     _send_plain_message(sender_no, msg)
-
-#     # 6) Reset bot state for next trip
-#     _update_contact_state(
-#         contact,
-#         bot_state="DONE",
-#         expected_passengers=0,
-#         received_images=0,
-#         # keep current_trip so you can see last trip on contact
-#     )
-
-
-# # ---------------------------------------------------------------------------
-# # WhatsApp send helpers (local)
-# # ---------------------------------------------------------------------------
-
-# def _send_thread_reply(incoming_doc, message: str):
-#     """Create a reply message (is_reply=1, uses incoming.message_id)."""
-#     to = normalize_phone(getattr(incoming_doc, "from_", "") or getattr(incoming_doc, "from", "") or "")
-#     if not to:
-#         return
-
-#     reply = frappe.get_doc({
-#         "doctype": "WhatsApp Message",
-#         "type": "Outgoing",
-#         "to": to,
-#         "content_type": "text",
-#         "message": message,
-#         "message_type": "Manual",
-#         "is_reply": 1,
-#         "reply_to_message_id": incoming_doc.message_id,
-#     })
-#     reply.insert(ignore_permissions=True)
-#     return reply.name
-
-
-# def _send_plain_message(to: str, message: str):
-#     """Non-thread text message (for final Kashf notification)."""
-#     to = normalize_phone(to)
-#     if not to:
-#         return
-
-#     msg = frappe.get_doc({
-#         "doctype": "WhatsApp Message",
-#         "type": "Outgoing",
-#         "to": to,
-#         "content_type": "text",
-#         "message": message,
-#         "message_type": "Manual",
-#     })
-#     msg.insert(ignore_permissions=True)
-#     return msg.name

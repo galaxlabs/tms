@@ -1,3 +1,204 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+
+<style>
+  /* printable page break */
+  @media print { .page-break { page-break-before: always; } }
+  /* simple Arabic block styling */
+  .agreement-content {
+    direction: rtl; text-align: right;
+    line-height: 2; font-size: 14px;
+  }
+  .agreement-heading { font-size: 22px; font-weight: 700; }
+</style>
+
+<!-- ========== PAGE 1: Trip Details ========== -->
+<header class="page-header">
+  <div class="header-section" style="padding: 20px; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center;">
+    <!-- Logo Left  -->
+    <div class="logo-container" style="flex: 0 0 auto;">
+        {% set company_logo = frappe.db.get_value('Company', staff_company_name, 'company_logo') %}
+        {% if company_logo %}
+          <img src="{{ company_logo | abs_url }}" alt="Company Logo" style="height:80px;">
+        {% endif %}      
+    </div>
+    <!-- Company Info Right -->
+    <div class="company-info" style="flex: 1; text-align: right;">
+      <p style="margin: 0; font-size: 18px; font-weight: bold; color: #000; direction: ltr;">
+        {{ frappe.db.get_value('Company', staff_company_name, 'company_name') or '' }}
+      </p>
+      <p style="margin: 0; font-size: 32px; font-weight: bold; color: #000; direction: rtl;">
+        {{ frappe.db.get_value('Company', staff_company_name, 'company_name_arabic') or '' }}
+      </p>
+    </div>
+  </div>
+</header>
+
+<div class="print-container">
+  <h3>Trip Details</h3>
+  <h6>Trip Name: {{ doc.name }} | Date: {{ doc.date }}</h6>
+  <br>
+
+  <button class="btn btn-primary" onclick="window.print()">🖨️ Print</button>
+
+  <table class="table table-bordered">
+    <tbody>
+      <tr>
+        <th>Driver Name</th>
+        <td>{{ doc.driver }}</td>
+        <th>Residency No</th>
+        <td>
+          {{ frappe.db.get_value("Documents", {
+               "parent": doc.driver, "parenttype": "Staff", "parentfield": "documents",
+               "document_type": "Iqama No"
+             }, "document_no") or "-" }}
+        </td>
+      </tr>
+
+      <tr>
+        <th>Vehicle Type</th>
+        {%- set make, model, plate = frappe.db.get_value(
+             "Vehicle", doc.assigned_vehicle, ["make","model","license_plate"]
+           ) or ("","","") -%}
+        <td>{{ make }} {{ model }} ({{ plate or "-" }})</td>
+
+        <th>Registration No</th>
+        <td>
+          {{ frappe.db.get_value("Documents", {
+               "parent": doc.assigned_vehicle, "parenttype": "Vehicle", "parentfield": "documents",
+               "document_type": "Registration No"
+             }, "document_no") or "-" }}
+        </td>
+      </tr>
+
+      <tr>
+        <th>Passengers</th>
+        <td>{{ doc.passengers | length }}</td>
+        <th>Date</th>
+        <td>{{ doc.date }}</td>
+      </tr>
+
+      <tr>
+        <th>From</th>
+        <td>{{ doc.from_location }}</td>
+        <th>To</th>
+        <td>{{ doc.to_location }}</td>
+      </tr>
+
+      <tr>
+        <th>Departure</th>
+        <td>{{ doc.departure }}</td>
+        <th>Arrival</th>
+        <td>{{ doc.arrival }}</td>
+      </tr>
+
+      <tr>
+        <th>Distance</th>
+        <td>{{ doc.distance }} km</td>
+        <th>Co-Driver</th>
+        <td>{{ doc.co_driver or "-" }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Passengers</h3>
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Passenger Name</th>
+        <th>ID/Passport</th>
+        <th>Nationality</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in doc.passengers %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ row.passenger_name }}</td>
+        <td>{{ row.idpassport_no }}</td>
+        <td>{{ row.nationality }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if doc.qr_code %}
+    <div style="margin-top: 10px; text-align: center;">
+      <h4>QR Code</h4>
+      <img src="{{ doc.qr_code }}" style="max-width: 200px;">
+    </div>
+  {% endif %}
+</div>
+
+<!-- Force next page on print -->
+<div class="page-break"></div>
+
+<!-- ========== PAGE 2: Agreement (Arabic) ========== -->
+<header class="page-header">
+  <div class="header-section" style="padding: 20px; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center;">
+    <!-- Logo Left  -->
+    <div class="logo-container" style="flex: 0 0 auto;">
+      {% set company_logo = frappe.db.get_value('Company', staff_company_name, 'company_logo') %}
+        {% if company_logo %}
+          <img src="{{ company_logo | abs_url }}" alt="Company Logo" style="height:80px;">
+        {% endif %}
+    </div>
+    <!-- Company Info Right -->
+    <div class="company-info" style="flex: 1; text-align: right;">
+      <p style="margin: 0; font-size: 18px; font-weight: bold; color: #000; direction: ltr;">
+        {{ frappe.db.get_value('Company', staff_company_name, 'company_name') or '' }}
+      </p>
+      <p style="margin: 0; font-size: 32px; font-weight: bold; color: #000; direction: rtl;">
+        {{ frappe.db.get_value('Company', staff_company_name, 'company_name_arabic') or '' }}
+      </p>
+    </div>
+  </div>
+</header>
+
+<div class="print-container agreement-content">
+  <p><strong>التاريخ الهجري:</strong> {{ doc.hijri_date or "" }} هـ</p>
+  <p><strong>الميلادي:</strong> {{ (doc.date and frappe.utils.formatdate(doc.date, "dd-MM-yyyy")) or "" }} م</p>
+
+  <h3 class="agreement-heading" style="text-align:center;">عقد نقل ركاب بالحافلات</h3>
+
+  <p>تم إبرام هذا العقد بين:</p>
+  <p><strong>الطرف الأول :</strong>
+     {{ frappe.db.get_value('Company', staff_company_name, 'company_name_arabic') or '' }}
+  </p>
+
+  {% set first = (doc.passengers and (doc.passengers[0] if doc.passengers|length>0 else None)) or None %}
+  <p><strong>الطرف الثاني :</strong>
+     {% if first and first.passenger_name %} {{ first.passenger_name }}
+     {% else %} ____________ {% endif %}
+  </p>
+
+  <h3>بناءً على:</h3>
+  <p>المادة (39) من اللائحة المنظمة لنشاط النقل البري للركاب وتوجيه الحافلات.</p>
+  <p>المادة (1) من المادة (39) التي تنص على وجوب إبرام الناقل لعقد نقل مع الأطراف التجارية الأخرى.</p>
+
+  <h3>اتفق الطرفان على ما يلي:</h3>
+  <p><strong>موضوع العقد :</strong></p>
+  <ul>
+    <li>يتعهد الطرف الأول بتنفيذ عملية نقل للطرف الثاني، مع مراقبة وتوجيه الركاب من الموقع المحدد مسبقًا، وتوصيلهم إلى الوجهة المحددة في هذا العقد.</li>
+  </ul>
+
+  <p>
+    <strong>نقطة الانطلاق :</strong> {{ doc.from_location or "" }}<br>
+    <strong>نقطة الوصول :</strong> {{ doc.to_location or "" }}
+  </p>
+
+  <hr>
+
+  <!-- Optional footer info from Company Docs/Phone -->
+  <div style="font-size:12px; color:#444; margin-top: 10px;">
+
+    CR: {{ cr_no }} | Reg: {{ reg_no }} | Phone: {{ phone_no }}
+  </div>
+</div>
+
+{% endblock %}
 <!-- {% set cr_no = frappe.db.get_value('Documents', {
       'parent': staff_company_name, 'parenttype':'Company', 'parentfield':'documents', 'document_type':'CR'
     }, 'document_no') or '' %}

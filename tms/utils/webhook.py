@@ -1,3 +1,5 @@
+from tms.utils.whatsapp_bot import handle_incoming_whatsapp
+
 """Webhook."""
 import json
 import requests
@@ -150,6 +152,140 @@ def _attach_file_to_message(*, message_doc, file_data: bytes, mime_type: str):
 	return file_doc
 
 
+# def post():
+# 	"""Handle Meta webhook POST."""
+# 	data = _read_json_body()
+
+# 	# Always log payload (so we can prove Meta hit us)
+# 	_log_webhook_payload(data)
+
+# 	change_field, value = _extract_change(data)
+# 	if not (change_field and value):
+# 		return Response("OK", status=200)
+
+# 	# Messages / statuses are inside value
+# 	messages = value.get("messages") or []
+# 	sender_profile_name = _get_sender_profile_name(value)
+
+# 	# If messages exist -> create incoming WhatsApp Message docs
+# 	if messages:
+# 		settings = frappe.get_doc("WhatsApp Settings", "WhatsApp Settings")
+
+# 		auto_img = bool(getattr(settings, "automatically_download_images", 0))
+# 		auto_doc = bool(getattr(settings, "automatically_download_documents", 0))
+
+# 		for message in messages:
+# 			message_type = message.get("type") or "unknown"
+# 			context = message.get("context") or {}
+# 			is_reply = True if (context and "forwarded" not in context) else False
+# 			reply_to_message_id = context.get("id") if is_reply else None
+
+# 			# TEXT
+# 			if message_type == "text":
+# 				text = (message.get("text") or {}).get("body") or ""
+# 				_save_message_row(
+# 					message=message,
+# 					sender_profile_name=sender_profile_name,
+# 					reply_to_message_id=reply_to_message_id,
+# 					is_reply=is_reply,
+# 					content_type="text",
+# 					text=text
+# 				)
+
+# 			# REACTION
+# 			elif message_type == "reaction":
+# 				reaction = (message.get("reaction") or {})
+# 				emoji = reaction.get("emoji") or ""
+# 				_save_message_row(
+# 					message=message,
+# 					sender_profile_name=sender_profile_name,
+# 					reply_to_message_id=reaction.get("message_id"),
+# 					is_reply=True,
+# 					content_type="reaction",
+# 					text=emoji
+# 				)
+
+# 			# INTERACTIVE (Flow)
+# 			elif message_type == "interactive":
+# 				interactive = message.get("interactive") or {}
+# 				nfm = interactive.get("nfm_reply") or {}
+# 				resp_json = nfm.get("response_json")
+# 				_save_message_row(
+# 					message=message,
+# 					sender_profile_name=sender_profile_name,
+# 					reply_to_message_id=reply_to_message_id,
+# 					is_reply=is_reply,
+# 					content_type="flow",
+# 					text=resp_json or json.dumps(interactive, ensure_ascii=False)
+# 				)
+
+# 			# BUTTON
+# 			elif message_type == "button":
+# 				btn = message.get("button") or {}
+# 				_save_message_row(
+# 					message=message,
+# 					sender_profile_name=sender_profile_name,
+# 					reply_to_message_id=reply_to_message_id,
+# 					is_reply=is_reply,
+# 					content_type="button",
+# 					text=btn.get("text") or ""
+# 				)
+
+# 			# MEDIA (only auto-download IMAGE + DOCUMENT)
+# 			elif message_type in ["image", "document", "audio", "video"]:
+# 				media_block = message.get(message_type) or {}
+# 				media_id = media_block.get("id")
+# 				caption = media_block.get("caption") or ""
+
+# 				# Always create ONE message row first (even if not downloading)
+# 				msg = _save_message_row(
+# 					message=message,
+# 					sender_profile_name=sender_profile_name,
+# 					reply_to_message_id=reply_to_message_id,
+# 					is_reply=is_reply,
+# 					content_type=message_type,
+# 					text=caption or (f"media_id:{media_id}" if media_id else "")
+# 				)
+
+# 				# If duplicate (already saved), msg will be None -> skip download
+# 				if not msg or not media_id:
+# 					continue
+
+# 				# Only download image + document if enabled
+# 				should_download = (message_type == "image" and auto_img) or (message_type == "document" and auto_doc)
+# 				if not should_download:
+# 					# audio/video/manual, or disabled: keep media_id in text for manual download
+# 					if not msg.message:
+# 						msg.message = f"media_id:{media_id}"
+# 						msg.save(ignore_permissions=True)
+# 					continue
+
+# 				file_data, mime_type, _url = _download_media_bytes(settings=settings, media_id=media_id)
+# 				if not file_data:
+# 					# keep media_id so you can try manual download later
+# 					if not msg.message:
+# 						msg.message = f"media_id:{media_id}"
+# 						msg.save(ignore_permissions=True)
+# 					continue
+
+# 				_attach_file_to_message(message_doc=msg, file_data=file_data, mime_type=mime_type)
+
+# 			# UNKNOWN
+# 			else:
+# 				_save_message_row(
+# 					message=message,
+# 					sender_profile_name=sender_profile_name,
+# 					reply_to_message_id=reply_to_message_id,
+# 					is_reply=is_reply,
+# 					content_type=message_type,
+# 					text=json.dumps(message, ensure_ascii=False)
+# 				)
+
+# 		return Response("OK", status=200)
+
+# 	# If no messages, handle statuses/template updates
+# 	update_status({"field": change_field, "value": value})
+# 	return Response("OK", status=200)
 def post():
 	"""Handle Meta webhook POST."""
 	data = _read_json_body()
@@ -173,15 +309,17 @@ def post():
 		auto_doc = bool(getattr(settings, "automatically_download_documents", 0))
 
 		for message in messages:
-			message_type = message.get("type") or "unknown"
+			message_type = (message.get("type") or "").lower()
 			context = message.get("context") or {}
 			is_reply = True if (context and "forwarded" not in context) else False
 			reply_to_message_id = context.get("id") if is_reply else None
 
-			# TEXT
+			msg_doc = None  # will hold the WhatsApp Message doc we just created
+
+			# ---------------- TEXT ----------------
 			if message_type == "text":
 				text = (message.get("text") or {}).get("body") or ""
-				_save_message_row(
+				msg_doc = _save_message_row(
 					message=message,
 					sender_profile_name=sender_profile_name,
 					reply_to_message_id=reply_to_message_id,
@@ -190,11 +328,11 @@ def post():
 					text=text
 				)
 
-			# REACTION
+			# ---------------- REACTION ----------------
 			elif message_type == "reaction":
 				reaction = (message.get("reaction") or {})
 				emoji = reaction.get("emoji") or ""
-				_save_message_row(
+				msg_doc = _save_message_row(
 					message=message,
 					sender_profile_name=sender_profile_name,
 					reply_to_message_id=reaction.get("message_id"),
@@ -203,12 +341,12 @@ def post():
 					text=emoji
 				)
 
-			# INTERACTIVE (Flow)
+			# ---------------- INTERACTIVE (flow) ----------------
 			elif message_type == "interactive":
 				interactive = message.get("interactive") or {}
 				nfm = interactive.get("nfm_reply") or {}
 				resp_json = nfm.get("response_json")
-				_save_message_row(
+				msg_doc = _save_message_row(
 					message=message,
 					sender_profile_name=sender_profile_name,
 					reply_to_message_id=reply_to_message_id,
@@ -217,10 +355,10 @@ def post():
 					text=resp_json or json.dumps(interactive, ensure_ascii=False)
 				)
 
-			# BUTTON
+			# ---------------- BUTTON ----------------
 			elif message_type == "button":
 				btn = message.get("button") or {}
-				_save_message_row(
+				msg_doc = _save_message_row(
 					message=message,
 					sender_profile_name=sender_profile_name,
 					reply_to_message_id=reply_to_message_id,
@@ -229,14 +367,14 @@ def post():
 					text=btn.get("text") or ""
 				)
 
-			# MEDIA (only auto-download IMAGE + DOCUMENT)
+			# ---------------- MEDIA (image / document / audio / video) ----------------
 			elif message_type in ["image", "document", "audio", "video"]:
 				media_block = message.get(message_type) or {}
 				media_id = media_block.get("id")
 				caption = media_block.get("caption") or ""
 
-				# Always create ONE message row first (even if not downloading)
-				msg = _save_message_row(
+				# 1) Create the message row FIRST (idempotent)
+				msg_doc = _save_message_row(
 					message=message,
 					sender_profile_name=sender_profile_name,
 					reply_to_message_id=reply_to_message_id,
@@ -245,39 +383,59 @@ def post():
 					text=caption or (f"media_id:{media_id}" if media_id else "")
 				)
 
-				# If duplicate (already saved), msg will be None -> skip download
-				if not msg or not media_id:
+				# duplicate? then nothing to do
+				if not msg_doc or not media_id:
 					continue
 
-				# Only download image + document if enabled
-				should_download = (message_type == "image" and auto_img) or (message_type == "document" and auto_doc)
+				# 2) Only auto-download image/document (audio/video manual later)
+				should_download = (
+					message_type == "image" and auto_img
+				) or (
+					message_type == "document" and auto_doc
+				)
+
 				if not should_download:
-					# audio/video/manual, or disabled: keep media_id in text for manual download
-					if not msg.message:
-						msg.message = f"media_id:{media_id}"
-						msg.save(ignore_permissions=True)
-					continue
+					# keep media_id in text for manual work later
+					if not msg_doc.message:
+						msg_doc.message = f"media_id:{media_id}"
+						msg_doc.save(ignore_permissions=True)
+				else:
+					file_data, mime_type, _url = _download_media_bytes(
+						settings=settings,
+						media_id=media_id
+					)
+					if file_data:
+						_attach_file_to_message(
+							message_doc=msg_doc,
+							file_data=file_data,
+							mime_type=mime_type
+						)
+					else:
+						# download failed: keep media_id so you can retry manually
+						if not msg_doc.message:
+							msg_doc.message = f"media_id:{media_id}"
+							msg_doc.save(ignore_permissions=True)
 
-				file_data, mime_type, _url = _download_media_bytes(settings=settings, media_id=media_id)
-				if not file_data:
-					# keep media_id so you can try manual download later
-					if not msg.message:
-						msg.message = f"media_id:{media_id}"
-						msg.save(ignore_permissions=True)
-					continue
-
-				_attach_file_to_message(message_doc=msg, file_data=file_data, mime_type=mime_type)
-
-			# UNKNOWN
+			# ---------------- UNKNOWN TYPE ----------------
 			else:
-				_save_message_row(
+				msg_doc = _save_message_row(
 					message=message,
 					sender_profile_name=sender_profile_name,
 					reply_to_message_id=reply_to_message_id,
 					is_reply=is_reply,
-					content_type=message_type,
+					content_type=message_type or "unknown",
 					text=json.dumps(message, ensure_ascii=False)
 				)
+
+			# ---------------- Call bot AFTER message_doc is fully ready ----------------
+			if msg_doc:
+				try:
+					handle_incoming_whatsapp(msg_doc)
+				except Exception as e:
+					frappe.log_error(
+						frappe.get_traceback(),
+						f"WhatsApp Bot Error for message {msg_doc.name}"
+					)
 
 		return Response("OK", status=200)
 
