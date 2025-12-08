@@ -96,7 +96,9 @@ class WhatsAppMessage(Document):
                 }
             )
 
-        if template.header_type:
+        # if template.header_type:
+
+        
             if self.attach:
                 if template.header_type == 'IMAGE':
 
