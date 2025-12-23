@@ -1,3 +1,5 @@
+import frappe
+from frappe.utils import today, get_first_day, get_last_day, add_days, formatdate
 
 def auto_generate_rent_invoices():
     today = frappe.utils.today()

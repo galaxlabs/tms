@@ -274,7 +274,7 @@ scheduler_events = {
 scheduler_events = {
 	"cron": {
 		"0 6 1 * *": [
-			"tms.hotels.api.auto_generate_rent_invoices"
+			"tms.hotels.api.rental.auto_generate_rent_invoices"
 		]
 	}
 

@@ -14,7 +14,9 @@
   "expected_passengers",
   "received_images",
   "bot_state",
-  "staff"
+  "staff",
+  "last_inbound_at",
+  "conversation_expires_at"
  ],
  "fields": [
   {
@@ -57,6 +59,16 @@
    "fieldtype": "Link",
    "label": "Staff",
    "options": "Staff"
+  },
+  {
+   "fieldname": "last_inbound_at",
+   "fieldtype": "Datetime",
+   "label": "Last Inbound"
+  },
+  {
+   "fieldname": "conversation_expires_at",
+   "fieldtype": "Datetime",
+   "label": "Conversation Expire At"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -72,7 +84,7 @@
    "link_fieldname": "to"
   }
  ],
- "modified": "2025-12-02 18:38:05.222358",
+ "modified": "2025-12-23 19:39:45.524681",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "WhatsApp Contact",

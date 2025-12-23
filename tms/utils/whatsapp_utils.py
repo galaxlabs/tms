@@ -6,6 +6,25 @@ import traceback
 import re
 
 
+def can_send_session_message(phone: str) -> bool:
+    phone = normalize_phone(phone)
+    contact_name = frappe.db.get_value("WhatsApp Contact", {"phone": phone}, "name")
+    if not contact_name:
+        return False  # unknown contact -> safest: require template
+
+    contact = frappe.get_doc("WhatsApp Contact", contact_name)
+
+    # Prefer expires field if you add it
+    expires = getattr(contact, "conversation_expires_at", None)
+    if expires:
+        return now_datetime() <= expires
+
+    last_in = getattr(contact, "last_inbound_at", None)
+    if not last_in:
+        return False
+    # If you didn't store expires, you can compute it:
+    return (now_datetime() - last_in).total_seconds() <= 24 * 3600
+
 # ---------------------------------------------------------------------------
 # Small helpers
 # ---------------------------------------------------------------------------
