@@ -10,7 +10,6 @@ import re
 import shutil
 import subprocess
 import tempfile
-import qrcode
 from frappe.utils import get_url
 from frappe.utils.pdf import prepare_options
 from pypdf import PdfReader, PdfWriter

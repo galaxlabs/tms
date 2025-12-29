@@ -135,7 +135,6 @@
   {
    "fieldname": "route",
    "fieldtype": "Data",
-   "hidden": 1,
    "label": "Route"
   },
   {
@@ -234,7 +233,7 @@
  "has_web_view": 1,
  "image_field": "qr_code",
  "links": [],
- "modified": "2025-12-08 11:40:54.304234",
+ "modified": "2025-12-27 22:11:55.961186",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "Trip",

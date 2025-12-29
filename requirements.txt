@@ -18,3 +18,4 @@ openai-agents==0.3.3
 PassportEye
 saudi-id-validator
 paddleocr        # (optional, future)
+google-genai

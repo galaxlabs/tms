@@ -1,4 +1,4 @@
-# /home/xg/xg-b/apps/tms/tms/utils/ocr_manager.py
+# /home/xg/xg-b/apps/tms/tms/utils/ocr_manager copy.py
 # tms/utils/ocr_manager.py
 import os
 import json

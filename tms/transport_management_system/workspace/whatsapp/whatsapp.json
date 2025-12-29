@@ -1,0 +1,70 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"54nf6CwQ4A\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">WhatsApp</span>\",\"col\":12}},{\"id\":\"oPFDqrhsX2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Whatsapp Notification Log\",\"col\":3}},{\"id\":\"oAHUuRew4T\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Whatsapp Notification\",\"col\":3}},{\"id\":\"RXT69O746Q\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Whatsapp Contact\",\"col\":3}},{\"id\":\"T8ibcMMRSD\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Whatsapp Send Log\",\"col\":3}},{\"id\":\"Ce_iurJfVx\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Whatsapp Message\",\"col\":3}}]",
+ "creation": "2025-12-21 09:56:14.033454",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "arrow-up-right",
+ "idx": 0,
+ "indicator_color": "",
+ "is_hidden": 0,
+ "label": "WhatsApp",
+ "links": [],
+ "modified": "2025-12-26 15:56:51.349592",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "WhatsApp",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 2.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Whatsapp Notification Log",
+   "link_to": "WhatsApp Notification Log",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Whatsapp Notification",
+   "link_to": "WhatsApp Notification",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Whatsapp Contact",
+   "link_to": "WhatsApp Contact",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Whatsapp Send Log",
+   "link_to": "WhatsApp Send Log",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Whatsapp Message",
+   "link_to": "WhatsApp Message",
+   "stats_filter": "[]",
+   "type": "DocType"
+  }
+ ],
+ "title": "WhatsApp"
+}

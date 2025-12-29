@@ -6,16 +6,22 @@
  "engine": "InnoDB",
  "field_order": [
   "processed_on",
-  "source",
   "ocr_engine",
+  "column_break_gtfp",
+  "source",
   "confidence",
+  "section_break_mzhb",
+  "file_fingerprint",
+  "column_break_dnkr",
+  "template",
   "section_break_meta",
   "reference_doctype",
-  "reference_name",
   "waba_message",
-  "trip",
   "file",
-  "media_hash__fingerprint",
+  "column_break_kjxy",
+  "reference_name",
+  "trip",
+  "media_hash_fingerprint",
   "section_break_text",
   "raw_text",
   "fixed_text",
@@ -49,7 +55,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "OCR Engine",
-   "options": "Tesseract\nOpenAI Vision\nHybrid"
+   "options": "Tesseract\nOpenAI Vision\nHybrid\nMRZ\nRegex\nGemini"
   },
   {
    "fieldname": "confidence",
@@ -77,8 +83,8 @@
   {
    "fieldname": "waba_message",
    "fieldtype": "Link",
-   "label": "WABA WhatsApp Message",
-   "options": "WABA WhatsApp Message"
+   "label": "WhatsApp Message",
+   "options": "WhatsApp Message"
   },
   {
    "fieldname": "trip",
@@ -91,11 +97,6 @@
    "fieldtype": "Link",
    "label": "File",
    "options": "File"
-  },
-  {
-   "fieldname": "media_hash__fingerprint",
-   "fieldtype": "Data",
-   "label": "Media Hash / Fingerprint"
   },
   {
    "fieldname": "section_break_text",
@@ -163,12 +164,45 @@
    "fieldname": "correction_json",
    "fieldtype": "Code",
    "label": "Correction JSON"
+  },
+  {
+   "fieldname": "section_break_mzhb",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "file_fingerprint",
+   "fieldtype": "Data",
+   "label": "Fingerprint",
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_dnkr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "template",
+   "fieldtype": "Link",
+   "label": "Template",
+   "options": "OCR Document Template"
+  },
+  {
+   "fieldname": "column_break_gtfp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_kjxy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "media_hash_fingerprint",
+   "fieldtype": "Data",
+   "label": "Media Hash Fingerprint"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-03 15:30:40.407231",
+ "modified": "2025-12-29 16:40:59.431568",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "OCR History",
