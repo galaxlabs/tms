@@ -9,14 +9,21 @@
  "engine": "InnoDB",
  "field_order": [
   "whatsapp_id",
-  "display_name",
   "current_trip",
-  "expected_passengers",
   "received_images",
-  "bot_state",
   "staff",
+  "conversation_expires_at",
+  "column_break_trsb",
+  "display_name",
+  "expected_passengers",
+  "bot_state",
   "last_inbound_at",
-  "conversation_expires_at"
+  "resend_ptr",
+  "section_break_cqsj",
+  "received_files_json",
+  "collected_file_urls_json",
+  "resend_indexes_json",
+  "route"
  ],
  "fields": [
   {
@@ -69,6 +76,43 @@
    "fieldname": "conversation_expires_at",
    "fieldtype": "Datetime",
    "label": "Conversation Expire At"
+  },
+  {
+   "fieldname": "column_break_trsb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_cqsj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "received_files_json",
+   "fieldtype": "Long Text",
+   "label": "received_files_json",
+   "options": "Json"
+  },
+  {
+   "fieldname": "collected_file_urls_json",
+   "fieldtype": "Code",
+   "label": "Collected File Urls json",
+   "options": "Json"
+  },
+  {
+   "fieldname": "resend_indexes_json",
+   "fieldtype": "Code",
+   "label": "Resend Indexes Json",
+   "options": "Json"
+  },
+  {
+   "fieldname": "resend_ptr",
+   "fieldtype": "Int",
+   "label": "Resend Petren"
+  },
+  {
+   "fieldname": "route",
+   "fieldtype": "Code",
+   "label": "Route",
+   "options": "Json"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -84,7 +128,7 @@
    "link_fieldname": "to"
   }
  ],
- "modified": "2025-12-24 00:55:54.309409",
+ "modified": "2025-12-30 06:04:53.737618",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "WhatsApp Contact",

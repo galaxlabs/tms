@@ -1,0 +1,99 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-12-30 04:17:23.102139",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "default_language",
+  "max_passengers",
+  "column_break_exjo",
+  "resend_on_low_confidence",
+  "conversation_hours",
+  "max_resend_attempts",
+  "confidence_threshold",
+  "section_break_chpj",
+  "message_templates"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "default_language",
+   "fieldtype": "Select",
+   "label": "Language",
+   "options": "Eng\nAr\nUr"
+  },
+  {
+   "fieldname": "max_passengers",
+   "fieldtype": "Int",
+   "label": "Max Passengers"
+  },
+  {
+   "fieldname": "column_break_exjo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "conversation_hours",
+   "fieldtype": "Int",
+   "label": "Conversation Hours"
+  },
+  {
+   "default": "0",
+   "fieldname": "resend_on_low_confidence",
+   "fieldtype": "Check",
+   "label": "Resend On Low Confidence"
+  },
+  {
+   "fieldname": "max_resend_attempts",
+   "fieldtype": "Int",
+   "label": "Max Resend Attempts"
+  },
+  {
+   "fieldname": "confidence_threshold",
+   "fieldtype": "Float",
+   "label": "Confidence Threshold"
+  },
+  {
+   "fieldname": "section_break_chpj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "message_templates",
+   "fieldtype": "Code",
+   "label": "Message Templates",
+   "options": "Json"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-12-30 04:26:22.957777",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "WhatsApp Bot Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

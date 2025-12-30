@@ -296,9 +296,9 @@ doc_events = {
         "on_update_after_submit": "tms.utils.run_server_script_for_doc_event",
     },
 
-    # "WhatsApp Message": {
-    #     "after_insert": "tms.utils.whatsapp_bot.handle_incoming_whatsapp",
-    # },
+    "WhatsApp Message": {
+        "after_insert": "tms.utils.whatsapp_bot.entry.handle_incoming_whatsapp",
+    },
     
     "Trip": {
         "after_save": "tms.utils.pdf_hooks.create_pdf_on_submit"
