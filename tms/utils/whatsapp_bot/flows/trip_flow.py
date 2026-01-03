@@ -1,3 +1,6 @@
+# /home/xg/xg-b/apps/tms/tms/utils/whatsapp_bot/flows/trip_flow.py
+
+import json
 import frappe
 from datetime import timedelta
 from frappe.utils import nowdate, now_datetime
@@ -16,10 +19,8 @@ def get_or_create_trip(driver_name: str, contact):
     if current_trip_name and frappe.db.exists("Trip", current_trip_name):
         t = frappe.get_doc("Trip", current_trip_name)
 
-        # If DONE, don't reuse
         state = (getattr(contact, "bot_state", "") or "").upper()
         if state != "DONE":
-            # Keep reuse only if recent and scheduled/departed
             created_ok = True
             try:
                 created_ok = (now_datetime() - t.creation) <= timedelta(hours=12)
@@ -38,22 +39,39 @@ def get_or_create_trip(driver_name: str, contact):
         trip.departure = now_datetime()
         trip.insert(ignore_permissions=True)
 
-        # Attach to contact
+        # Prepare contact updates (single UPDATE, no .save())
+        updates = {}
+
         if hasattr(contact, "current_trip"):
+            updates["current_trip"] = trip.name
             contact.current_trip = trip.name
+
         if hasattr(contact, "bot_state"):
+            updates["bot_state"] = "WAITING_PASSENGER_COUNT"
             contact.bot_state = "WAITING_PASSENGER_COUNT"
+
         if hasattr(contact, "expected_passengers"):
+            updates["expected_passengers"] = 0
             contact.expected_passengers = 0
+
         if hasattr(contact, "received_images"):
+            updates["received_images"] = 0
             contact.received_images = 0
+
         if hasattr(contact, "collected_file_urls_json"):
+            updates["collected_file_urls_json"] = "[]"
             contact.collected_file_urls_json = "[]"
+
         if hasattr(contact, "resend_indexes_json"):
+            updates["resend_indexes_json"] = "[]"
             contact.resend_indexes_json = "[]"
+
         if hasattr(contact, "resend_ptr"):
+            updates["resend_ptr"] = 0
             contact.resend_ptr = 0
 
-        contact.save(ignore_permissions=True)
+        # This is the critical change:
+        if updates:
+            frappe.db.set_value(contact.doctype, contact.name, updates, update_modified=False)
 
     return trip

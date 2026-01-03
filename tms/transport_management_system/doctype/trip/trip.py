@@ -38,6 +38,9 @@ class Trip(WebsiteGenerator):
             self.db_set("qr_code", self.qr_code)
     
     def validate(self):
+        if self.departure and self.duration_minutes:
+            self.arrival = add_to_date(self.departure, minutes=int(self.duration_minutes), as_datetime=True)
+        else:
             # keep any other validate logic here later
             self.set_estimated_arrival()
     

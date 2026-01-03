@@ -1,0 +1,134 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-01-03 14:08:54.465933",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "fingerprint",
+  "doc_type_detected",
+  "created_at",
+  "last_used_at",
+  "id_no",
+  "full_name",
+  "column_break_obww",
+  "best_confidence",
+  "use_count",
+  "source_batch",
+  "sha256",
+  "phash",
+  "nationality",
+  "section_break_qxwh",
+  "extracted_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "fingerprint",
+   "fieldtype": "Data",
+   "label": "Fingerprint",
+   "unique": 1
+  },
+  {
+   "fieldname": "section_break_qxwh",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "extracted_json",
+   "fieldtype": "Code",
+   "label": "Extracted Json",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "column_break_obww",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "best_confidence",
+   "fieldtype": "Float",
+   "label": "Best Confidence"
+  },
+  {
+   "fieldname": "doc_type_detected",
+   "fieldtype": "Select",
+   "label": "Document Detected",
+   "options": "IQAMA\nPASSPORT\nOTHER"
+  },
+  {
+   "fieldname": "created_at",
+   "fieldtype": "Datetime",
+   "label": "Created At"
+  },
+  {
+   "fieldname": "last_used_at",
+   "fieldtype": "Datetime",
+   "label": "Last Used At "
+  },
+  {
+   "fieldname": "use_count",
+   "fieldtype": "Int",
+   "label": "Use Count"
+  },
+  {
+   "fieldname": "source_batch",
+   "fieldtype": "Link",
+   "label": "Source Batch",
+   "options": "WhatsApp Media Batch"
+  },
+  {
+   "fieldname": "sha256",
+   "fieldtype": "Data",
+   "label": "sha256",
+   "unique": 1
+  },
+  {
+   "fieldname": "phash",
+   "fieldtype": "Data",
+   "label": "phash",
+   "search_index": 1
+  },
+  {
+   "fieldname": "id_no",
+   "fieldtype": "Data",
+   "label": "id_no",
+   "search_index": 1
+  },
+  {
+   "fieldname": "full_name",
+   "fieldtype": "Data",
+   "label": "full_name",
+   "search_index": 1
+  },
+  {
+   "fieldname": "nationality",
+   "fieldtype": "Data",
+   "label": "nationality"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-01-03 16:21:59.359363",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "OCR Fingerprint Cache",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,182 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-01-03 01:32:53.004814",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "inbound_message_id",
+  "file_url",
+  "created_at",
+  "attach",
+  "error",
+  "is_resend",
+  "attempt_no",
+  "source",
+  "extracted_ref",
+  "image_height",
+  "image_width",
+  "column_break_zklu",
+  "passenger_index",
+  "fingerprint",
+  "ocr_history",
+  "ocr_status",
+  "confidence",
+  "media_id",
+  "mime_type",
+  "file_name",
+  "sha256",
+  "file_size",
+  "phash"
+ ],
+ "fields": [
+  {
+   "fieldname": "inbound_message_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "inbound_message_id"
+  },
+  {
+   "fieldname": "file_url",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "file_url"
+  },
+  {
+   "fieldname": "created_at",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "created_at"
+  },
+  {
+   "fieldname": "column_break_zklu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "passenger_index",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "passenger_index"
+  },
+  {
+   "fieldname": "fingerprint",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "fingerprint"
+  },
+  {
+   "fieldname": "ocr_history",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "ocr_history",
+   "options": "OCR History"
+  },
+  {
+   "fieldname": "ocr_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "ocr_status",
+   "options": "PENDING\nCACHED\nPROCESSED\nLOW_CONFIDENCE\nERROR"
+  },
+  {
+   "fieldname": "error",
+   "fieldtype": "Small Text",
+   "label": "error"
+  },
+  {
+   "fieldname": "confidence",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "confidence"
+  },
+  {
+   "fieldname": "attach",
+   "fieldtype": "Attach",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "media_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "media_id"
+  },
+  {
+   "fieldname": "mime_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "mime_type"
+  },
+  {
+   "fieldname": "file_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "File Name"
+  },
+  {
+   "fieldname": "file_size",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "File Size"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_resend",
+   "fieldtype": "Check",
+   "label": "is_resend"
+  },
+  {
+   "fieldname": "attempt_no",
+   "fieldtype": "Int",
+   "label": "attempt_no"
+  },
+  {
+   "fieldname": "sha256",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "sha256"
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "label": "source",
+   "options": "WHATSAPP\nRESEND\nMANUAL"
+  },
+  {
+   "fieldname": "extracted_ref",
+   "fieldtype": "Link",
+   "label": "extracted_ref",
+   "options": "OCR Fingerprint Cache"
+  },
+  {
+   "fieldname": "phash",
+   "fieldtype": "Data",
+   "label": "phash"
+  },
+  {
+   "fieldname": "image_height",
+   "fieldtype": "Int",
+   "label": "image_height"
+  },
+  {
+   "fieldname": "image_width",
+   "fieldtype": "Int",
+   "label": "image_width"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-01-03 14:39:49.237814",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "WhatsApp Media Batch Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -7,514 +7,32 @@
 # - OCR each doc -> OCR History
 # - When received_docs >= expected_passengers -> fill Trip.passengers -> send Trip PDF
 
-import re
-import json
-import random
-import frappe
-from datetime import timedelta
-from frappe.utils import nowdate, now_datetime, add_to_date
-
-from tms.utils.whatsapp_utils import (
-    normalize_phone,
-    get_or_create_contact,
-    send_trip_pdf_via_whatsapp,
-)
-
-
-# ---------------------------------------------------------------------------
-# Random Routes (fixed)
-# ---------------------------------------------------------------------------
-
-_RANDOM_ROUTE_PAIRS = [
-    ("Jeddah", "Makkah"),
-    ("Makkah", "Jeddah"),
-    ("Jeddah", "Madinah"),
-    ("Madinah", "Jeddah"),
-    ("Makkah", "Madinah"),
-    ("Madinah", "Makkah"),
-]
-
-def _pick_random_route_pair():
-    return random.choice(_RANDOM_ROUTE_PAIRS)
-
-def _route_autoname(from_city: str, to_city: str) -> str:
-    return f"{from_city}-To-{to_city}"
-
-def _get_or_create_route_quick(from_city: str, to_city: str) -> str:
-    """Ensure Route exists; also tries to fill distance/duration using your get_distance()."""
-    name = _route_autoname(from_city, to_city)
-
-    if frappe.db.exists("Route", name):
-        return name
-
-    route = frappe.new_doc("Route")
-    route.from_city = from_city
-    route.to_city = to_city
-
-    try:
-        from tms.transport_management_system.doctype.route.route import get_distance
-        info = get_distance(from_city, to_city)
-        route.from_city = info.get("from_city") or from_city
-        route.to_city = info.get("to_city") or to_city
-        route.distance = info.get("distance") or 0
-        route.duration = info.get("duration") or ""
-        route.avg_speed_kmph = 115
-    except Exception:
-        # ok: still create Route even if google fails
-        pass
-
-    route.insert(ignore_permissions=True)
-    return route.name
-
-# ---------------------------------------------------------------------------
-# Entry Hook
-# ---------------------------------------------------------------------------
-
-def handle_incoming_whatsapp(doc, event=None):
-    """Hook: called on after_insert of WhatsApp Message."""
-    frappe.set_user("whatsapp.bot@example.com")
-
-    if doc.type != "Incoming":
-        return
-
-    content_type = (doc.content_type or "").lower()
-
-    sender_no_raw = (doc.get("from") or doc.get("from_") or "").strip()
-    sender_no = normalize_phone(sender_no_raw)
-    profile_name = (doc.profile_name or "").strip()
-
-    # Create/Update contact (minimal contact fields recommended)
-    contact = get_or_create_contact(sender_no, profile_name)
-    if not contact:
-        return
-
-    # Update 24-hour window for ANY inbound message
-    now = now_datetime()
-    _update_contact_state(
-        contact,
-        last_inbound_at=now,
-        conversation_expires_at=add_to_date(now, hours=24),
-    )
-
-    # Only proceed if sender is Staff/Driver (ignore others)
-    driver_name = _find_driver_by_phone(sender_no)
-    if not driver_name:
-        return
-
-    # Route messages
-    if content_type == "text":
-        _handle_text_message(doc, contact, driver_name)
-    elif content_type in ("image", "document"):
-        _handle_media_message(doc, contact, driver_name)
-    else:
-        return
-
-# ---------------------------------------------------------------------------
-# Contact helpers
-# ---------------------------------------------------------------------------
-
-def _update_contact_state(contact, **kwargs):
-    """Update WhatsApp Contact fields safely (only if field exists)."""
-    if not contact:
-        return
-
-    dirty = False
-    for field, value in kwargs.items():
-        if hasattr(contact, field):
-            setattr(contact, field, value)
-            dirty = True
-
-    if dirty:
-        contact.save(ignore_permissions=True)
-
-# ---------------------------------------------------------------------------
-# Text handling (passenger count only)
-# ---------------------------------------------------------------------------
-
-def _handle_text_message(doc, contact, driver_name: str):
-    text = (doc.message or "").strip()
-    num = _extract_int(text)
-
-    if not num or num <= 0:
-        _send_thread_reply(
-            doc,
-            "ℹ️ Please send *number of passengers* only.\n"
-            "ℹ️ من فضلك أرسل *عدد الركاب* فقط.\n"
-            "ℹ️ براہ کرم صرف *مسافروں کی تعداد* بھیجیں۔"
-        )
-        return
-
-    expected = int(num)
-    received = int(getattr(contact, "received_images", 0) or 0)
-
-    _update_contact_state(
-        contact,
-        expected_passengers=expected,
-        bot_state="COLLECTING_DOCS",
-    )
-
-    trip = _get_or_create_trip_for_contact(driver_name, contact)
-
-    # If no docs yet, ask to send them
-    if received == 0:
-        _send_thread_reply(
-            doc,
-            f"✅ OK. Passenger count: {expected}.\n"
-            f"Now send {expected} clear image/PDF documents (Iqama/Passport/Visa), "
-            f"one per passenger.\n\n"
-            f"✅ تم تسجيل عدد الركاب: {expected}.\n"
-            f"الآن أرسل {expected} مستندات واضحة (إقامة/جواز/تأشيرة) لكل راكب.\n\n"
-            f"✅ مسافروں کی تعداد: {expected}.\n"
-            f"اب {expected} صاف دستاویزات (اقامہ/پاسپورٹ/ویزہ) ہر مسافر کے لیے ایک بھیجیں۔"
-        )
-        return
-
-    # If docs already enough, finalize now
-    if _maybe_finalize_trip(contact, driver_name, trip):
-        return
-
-    # Otherwise tell remaining
-    if received < expected:
-        remaining = expected - received
-        _send_thread_reply(
-            doc,
-            f"✅ Passenger count saved: {expected}.\n"
-            f"Received documents: {received}. Remaining: {remaining}.\n\n"
-            f"✅ تم حفظ العدد: {expected}.\n"
-            f"تم استلام: {received}. المتبقي: {remaining}.\n\n"
-            f"✅ تعداد محفوظ: {expected}.\n"
-            f"موصول: {received}. باقی: {remaining}."
-        )
-        return
-
-# ---------------------------------------------------------------------------
-# Media handling (image/pdf)
-# ---------------------------------------------------------------------------
-
-def _handle_media_message(doc, contact, driver_name: str):
-    # Ensure we have a Trip for this driver/contact
-    trip = _get_or_create_trip_for_contact(driver_name, contact)
-
-    file_url = (doc.attach or "").strip()
-    if not file_url:
-        _send_thread_reply(
-            doc,
-            "🕐 Received, but no file was attached.\n"
-            "🕐 تم الاستلام لكن لا يوجد ملف مرفق.\n"
-            "🕐 میسج ملا لیکن کوئی فائل منسلک نہیں تھی۔"
-        )
-        return
-
-    # Run OCR + create OCR History record
-    ocr_ok = _create_ocr_history_and_run_ocr(doc, trip, file_url)
-    if not ocr_ok:
-        _send_thread_reply(
-            doc,
-            "⚠️ Document is not clear. Please send a clearer image/PDF.\n"
-            "⚠️ المستند غير واضح. أرسل صورة/ملف أوضح.\n"
-            "⚠️ دستاویز واضح نہیں۔ براہ کرم صاف تصویر/پی ڈی ایف بھیجیں۔"
-        )
-        return
-
-    received = int(getattr(contact, "received_images", 0) or 0) + 1
-    expected = int(getattr(contact, "expected_passengers", 0) or 0)
-
-    # Update counters
-    _update_contact_state(
-        contact,
-        received_images=received,
-        bot_state=("COLLECTING_DOCS" if expected > 0 else "WAITING_PASSENGER_COUNT"),
-    )
-
-    # Try finalize
-    if _maybe_finalize_trip(contact, driver_name, trip):
-        return
-
-    # Reply progress
-    if expected <= 0:
-        _send_thread_reply(
-            doc,
-            f"🧾 Document {received} received.\n"
-            "Now reply with *number of passengers*.\n\n"
-            f"🧾 تم استلام المستند رقم {received}.\n"
-            "الآن أرسل *عدد الركاب*.\n\n"
-            f"🧾 دستاویز نمبر {received} موصول ہوئی۔\n"
-            "اب *مسافروں کی تعداد* بھیجیں۔"
-        )
-    else:
-        remaining = max(expected - received, 0)
-        if remaining > 0:
-            _send_thread_reply(
-                doc,
-                f"✅ Document {received}/{expected} received. Remaining: {remaining}.\n\n"
-                f"✅ تم استلام {received}/{expected}. المتبقي: {remaining}.\n\n"
-                f"✅ موصول {received}/{expected}. باقی: {remaining}."
-            )
-
-# ---------------------------------------------------------------------------
-# Driver & Trip helpers
-# ---------------------------------------------------------------------------
-
-def _normalize_for_match(value: str) -> str:
-    if not value:
-        return ""
-    digits = re.sub(r"\D", "", value)
-    return digits[-10:] if len(digits) >= 10 else digits
-
-def _find_driver_by_phone(phone: str):
-    key = _normalize_for_match(phone)
-    if not key:
-        return None
-
-    staff_rows = frappe.get_all(
-        "Staff",
-        filters={"mobile_no": ["!=", ""]},
-        fields=["name", "mobile_no"],
-    )
-
-    for row in staff_rows:
-        if _normalize_for_match(row.get("mobile_no")) == key:
-            return row["name"]
-
-    return None
-
-def _get_or_create_trip_for_contact(driver_name: str, contact):
-    """
-    Reuse contact.current_trip if active and created within 1 hour.
-    Otherwise create a NEW Trip and reset counters.
-    """
-    trip = None
-    current_trip_name = getattr(contact, "current_trip", None)
-
-    if current_trip_name and frappe.db.exists("Trip", current_trip_name):
-        t = frappe.get_doc("Trip", current_trip_name)
-
-        if t.trip_status in ("Scheduled", "Departed") and created_ok:
-            trip = t
-
-    if not trip:
-        trip = _create_new_trip_for_driver(driver_name)
-        _update_contact_state(
-            contact,
-            current_trip=trip.name,
-            bot_state="WAITING_PASSENGER_COUNT",
-            expected_passengers=0,
-            received_images=0,
-        )
-
-    return trip
-
-def _create_new_trip_for_driver(driver_name: str):
-    """Create a new Trip and assign a RANDOM route from fixed list."""
-    trip = frappe.new_doc("Trip")
-    trip.driver = driver_name
-
-    from_city, to_city = _pick_random_route_pair()
-    route_name = _get_or_create_route_quick(from_city, to_city)
-    trip.trip_route = route_name
-
-    trip.trip_status = "Scheduled"
-    trip.date = nowdate()
-    trip.departure = now_datetime()
-
-    trip.insert(ignore_permissions=True)
-    return trip
-
-# ---------------------------------------------------------------------------
-# OCR + OCR History
-# ---------------------------------------------------------------------------
-
-def _create_ocr_history_and_run_ocr(message_doc, trip, file_url: str) -> bool:
-    # linked File (optional)
-    file_doc = None
-    files = frappe.get_all(
-        "File",
-        filters={"attached_to_doctype": "WhatsApp Message", "attached_to_name": message_doc.name},
-        fields=["name"],
-        order_by="creation desc",
-        limit=1,
-    )
-    if files:
-        file_doc = files[0]["name"]
-
-    history = frappe.get_doc({
-        "doctype": "OCR History",
-        "source": "WhatsApp Message",
-        "ocr_engine": "Hybrid",
-        "reference_doctype": "WhatsApp Message",
-        "reference_name": message_doc.name,
-        "trip": trip.name,
-        "file": file_doc,
-    })
-    history.insert(ignore_permissions=True)
-
-    try:
-        from tms.utils.ocr_manager import analyze_id_document
-    except ImportError:
-        return False
-
-    try:
-        result = analyze_id_document(file_url=file_url)
-    except Exception:
-        return False
-
-    if not isinstance(result, dict):
-        return False
-
-    history.full_name = result.get("full_name") or ""
-    history.id_no = result.get("id_no") or ""
-    history.nationality = result.get("nationality") or ""
-    history.raw_text = result.get("raw_text") or ""
-    history.fixed_text = result.get("fixed_text") or ""
-    history.confidence = result.get("confidence") or 0
-
-    json_payload = result.get("json_data") or {}
-    try:
-        history.json_data = json.dumps(json_payload, ensure_ascii=False, indent=2)
-    except Exception:
-        history.json_data = json.dumps({"_raw": str(json_payload)}, ensure_ascii=False)
-
-    history.save(ignore_permissions=True)
-
-    min_conf = 40
-    return bool(history.full_name and history.id_no and (history.confidence or 0) >= min_conf)
-
-# ---------------------------------------------------------------------------
-# Finalize Trip
-# ---------------------------------------------------------------------------
-
-def _maybe_finalize_trip(contact, driver_name: str, trip) -> bool:
-    expected = int(getattr(contact, "expected_passengers", 0) or 0)
-    received = int(getattr(contact, "received_images", 0) or 0)
-
-    if expected > 0 and received >= expected:
-        _finalize_trip_and_kashf(contact, trip)
-        return True
-    return False
-
-def _finalize_trip_and_kashf(contact, trip):
-    expected = int(getattr(contact, "expected_passengers", 0) or 0)
-    received = int(getattr(contact, "received_images", 0) or 0)
-    if expected <= 0 or received <= 0:
-        return
-
-    ocr_rows = frappe.get_all(
-        "OCR History",
-        filters={"trip": trip.name},
-        fields=["full_name", "id_no", "nationality"],
-        order_by="creation asc",
-    )[:expected]
-
-    for row in ocr_rows:
-        passenger = trip.append("passengers", {})
-        passenger.passenger_name = row.get("full_name") or ""
-        passenger.idpassport_no = row.get("id_no") or ""
-        passenger.nationality = row.get("nationality") or ""
-
-    trip.save(ignore_permissions=True)
-    trip.add_comment("Info", f"Passengers auto-filled from WhatsApp OCR at {now_datetime()}.")
-
-    # Send Trip PDF
-    try:
-        send_trip_pdf_via_whatsapp(trip.name)
-    except Exception:
-        frappe.log_error("Kashf send failed", f"Trip: {trip.name}")
-
-    # Notify driver
-    _send_plain_message(
-        contact.whatsapp_id,
-        "✅ All documents received. Trip created and Kashf sent.\n"
-        "✅ تم استلام جميع المستندات. تم إنشاء الرحلة وإرسال كشف الرحلة.\n"
-        "✅ تمام دستاویزات موصول ہو گئیں، ٹرپ بن گئی اور کشف بھیج دیا گیا۔"
-    )
-
-    # Reset for next trip
-    _update_contact_state(
-        contact,
-        bot_state="DONE",
-        expected_passengers=0,
-        received_images=0,
-    )
-
-# ---------------------------------------------------------------------------
-# Utilities
-# ---------------------------------------------------------------------------
-
-def _extract_int(text: str):
-    digits = ""
-    for ch in text:
-        if ch.isdigit():
-            digits += ch
-        elif digits:
-            break
-    try:
-        return int(digits) if digits else None
-    except Exception:
-        return None
-
-def _send_thread_reply(incoming_doc, message: str):
-    to = normalize_phone(getattr(incoming_doc, "from_", "") or getattr(incoming_doc, "from", "") or "")
-    if not to:
-        return
-
-    reply = frappe.get_doc({
-        "doctype": "WhatsApp Message",
-        "type": "Outgoing",
-        "to": to,
-        "content_type": "text",
-        "message": message,
-        "message_type": "Manual",
-        "is_reply": 1,
-        "reply_to_message_id": incoming_doc.message_id,
-    })
-    reply.insert(ignore_permissions=True)
-    return reply.name
-
-def _send_plain_message(to: str, message: str):
-    to = normalize_phone(to)
-    if not to:
-        return
-
-    msg = frappe.get_doc({
-        "doctype": "WhatsApp Message",
-        "type": "Outgoing",
-        "to": to,
-        "content_type": "text",
-        "message": message,
-        "message_type": "Manual",
-    })
-    msg.insert(ignore_permissions=True)
-    return msg.name
-
-from tms.utils.ocr_cache import file_sha256
-
-fingerprint = file_sha256(saved_file_path)
-
-existing = frappe.db.get_value(
-    "OCR History",
-    {"file_fingerprint": fingerprint, "docstatus": ["<", 2]},
-    ["name", "extracted_json", "raw_text", "template", "engine", "confidence"],
-    as_dict=True
-)
-
-if existing:
-    # reuse and continue, no OCR call
-    return existing
-
-
-
-# # Last one
 # import re
 # import json
+# import random
 # import frappe
 # from datetime import timedelta
 # from frappe.utils import nowdate, now_datetime, add_to_date
+
 # from tms.utils.whatsapp_utils import (
 #     normalize_phone,
 #     get_or_create_contact,
 #     send_trip_pdf_via_whatsapp,
 # )
-# import random
+
+
+# Last one
+import re
+import json
+import frappe
+from datetime import timedelta
+from frappe.utils import nowdate, now_datetime, add_to_date
+from tms.utils.whatsapp_utils import (
+    normalize_phone,
+    get_or_create_contact,
+    send_trip_pdf_via_whatsapp,
+)
+import random
 
 
 
@@ -1023,246 +541,244 @@ if existing:
 #         default_route = contact.preferred_route
 
 #     # 2) Fallback: first available Route
-#     pairs = [
-#         ("Jeddah", "Makkah"),
-#         ("Makkah", "Jeddah"),
-#         ("Jeddah", "Madinah"),
-#         ("Madinah", "Jeddah"),
-#         ("Makkah", "Madinah"),
-#         ("Madinah", "Makkah"),
-#     ]
+    pairs = [
+        ("Jeddah", "Makkah"),
+        ("Makkah", "Jeddah"),
+        ("Jeddah", "Madinah"),
+        ("Madinah", "Jeddah"),
+        ("Makkah", "Madinah"),
+        ("Madinah", "Makkah"),
+    ]
 
-#     from_city, to_city = random.choice(pairs)
-#     default_route = f"{from_city}-To-{to_city}"
+    from_city, to_city = random.choice(pairs)
+    default_route = f"{from_city}-To-{to_city}"
 
-#     # If route doesn't exist yet, create it
-#     if not frappe.db.exists("Route", default_route):
-#         route = frappe.new_doc("Route")
-#         route.from_city = from_city
-#         route.to_city = to_city
-#         route.insert(ignore_permissions=True)
-#         default_route = route.name
+    # If route doesn't exist yet, create it
+    if not frappe.db.exists("Route", default_route):
+        route = frappe.new_doc("Route")
+        route.from_city = from_city
+        route.to_city = to_city
+        route.insert(ignore_permissions=True)
+        default_route = route.name
 
-#     if default_route:
-#         trip.trip_route = default_route  # fetch_from on Trip will fill from/to/distance/duration/avg_speed
+    if default_route:
+        trip.trip_route = default_route  # fetch_from on Trip will fill from/to/distance/duration/avg_speed
 
-#         # OPTIONAL: if you want to force-copy instead of just relying on fetch_from:
-#         # route_doc = frappe.get_doc("Route", default_route)
-#         # trip.from_location = route_doc.from_city
-#         # trip.to_location = route_doc.to_city
-#         # trip.distance = route_doc.distance
-#         # trip.duration = route_doc.duration
-#         # trip.avg_speed_kmph = route_doc.avg_speed_kmph
+        # OPTIONAL: if you want to force-copy instead of just relying on fetch_from:
+        # route_doc = frappe.get_doc("Route", default_route)
+        # trip.from_location = route_doc.from_city
+        # trip.to_location = route_doc.to_city
+        # trip.distance = route_doc.distance
+        # trip.duration = route_doc.duration
+        # trip.avg_speed_kmph = route_doc.avg_speed_kmph
 
-#     # Basic trip info
-#     trip.trip_status = "Scheduled"
-#     trip.date = nowdate()            # Today
-#     trip.departure = now_datetime()  # Now
+    # Basic trip info
+    trip.trip_status = "Scheduled"
+    trip.date = nowdate()            # Today
+    trip.departure = now_datetime()  # Now
 
-#     # mobile_no & assigned_vehicle will auto-fetch from driver via fetch_froms
-#     trip.insert(ignore_permissions=True)
-#     return trip
+    # mobile_no & assigned_vehicle will auto-fetch from driver via fetch_froms
+    trip.insert(ignore_permissions=True)
+    return trip
 
-# # ---------------------------------------------------------------------------
-# # OCR + OCR History
-# # ---------------------------------------------------------------------------
-# def _create_ocr_history_and_run_ocr(message_doc, trip, file_url: str) -> bool:
-#     """
-#     Create OCR History row and run OCR engine.
+# ---------------------------------------------------------------------------
+# OCR + OCR History
+# ---------------------------------------------------------------------------
+def _create_ocr_history_and_run_ocr(message_doc, trip, file_url: str) -> bool:
+    """
+    Create OCR History row and run OCR engine.
 
-#     Returns True if OCR produced usable parsed data
-#     (full_name + id_no + nationality).
-#     """
-#     # find File linked to this WhatsApp Message (created via Attach field)
-#     file_doc = None
-#     files = frappe.get_all(
-#         "File",
-#         filters={
-#             "attached_to_doctype": "WhatsApp Message",
-#             "attached_to_name": message_doc.name,
-#         },
-#         fields=["name"],
-#         order_by="creation desc",
-#         limit=1,
-#     )
-#     if files:
-#         file_doc = files[0]["name"]
+    Returns True if OCR produced usable parsed data
+    (full_name + id_no + nationality).
+    """
+    # find File linked to this WhatsApp Message (created via Attach field)
+    file_doc = None
+    files = frappe.get_all(
+        "File",
+        filters={
+            "attached_to_doctype": "WhatsApp Message",
+            "attached_to_name": message_doc.name,
+        },
+        fields=["name"],
+        order_by="creation desc",
+        limit=1,
+    )
+    if files:
+        file_doc = files[0]["name"]
 
-#     # 1) Create OCR History shell
-#     history = frappe.get_doc({
-#         "doctype": "OCR History",
-#         # ✅ Match your new Select options
-#         "source": "WhatsApp Message",
-#         "ocr_engine": "Hybrid",  # or set dynamically later
-#         "reference_doctype": "WhatsApp Message",
-#         "reference_name": message_doc.name,
-#         "trip": trip.name,
-#         "file": file_doc,
-#         # NOTE: we are not using waba_message field anymore
-#     })
-#     history.insert(ignore_permissions=True)
+    # 1) Create OCR History shell
+    history = frappe.get_doc({
+        "doctype": "OCR History",
+        # ✅ Match your new Select options
+        "source": "WhatsApp Message",
+        "ocr_engine": "Hybrid",  # or set dynamically later
+        "reference_doctype": "WhatsApp Message",
+        "reference_name": message_doc.name,
+        "trip": trip.name,
+        "file": file_doc,
+        # NOTE: we are not using waba_message field anymore
+    })
+    history.insert(ignore_permissions=True)
 
-#     # 2) Call OCR manager
-#     try:
-#         from tms.utils.ocr_manager import analyze_id_document
-#     except ImportError:
-#         # no OCR handler yet
-#         return False
+    # 2) Call OCR manager
+    try:
+        from tms.utils.ocr_manager import analyze_id_document
+    except ImportError:
+        # no OCR handler yet
+        return False
 
-#     try:
-#         result = analyze_id_document(file_url=file_url)
-#     except Exception:
-#         return False
+    try:
+        result = analyze_id_document(file_url=file_url)
+    except Exception:
+        return False
 
-#     if not isinstance(result, dict):
-#         return False
+    if not isinstance(result, dict):
+        return False
 
-#     # expected keys: full_name, id_no, nationality, raw_text, fixed_text, confidence, json_data
-#     history.full_name = result.get("full_name") or ""
-#     history.id_no = result.get("id_no") or ""
-#     history.nationality = result.get("nationality") or ""
-#     history.raw_text = result.get("raw_text") or ""
-#     history.fixed_text = result.get("fixed_text") or ""
-#     history.confidence = result.get("confidence") or 0
+    # expected keys: full_name, id_no, nationality, raw_text, fixed_text, confidence, json_data
+    history.full_name = result.get("full_name") or ""
+    history.id_no = result.get("id_no") or ""
+    history.nationality = result.get("nationality") or ""
+    history.raw_text = result.get("raw_text") or ""
+    history.fixed_text = result.get("fixed_text") or ""
+    history.confidence = result.get("confidence") or 0
 
-#     json_payload = result.get("json_data") or {}
-#     try:
-#         history.json_data = json.dumps(json_payload, ensure_ascii=False, indent=2)
-#     except Exception:
-#         history.json_data = json.dumps({"_raw": str(json_payload)}, ensure_ascii=False)
+    json_payload = result.get("json_data") or {}
+    try:
+        history.json_data = json.dumps(json_payload, ensure_ascii=False, indent=2)
+    except Exception:
+        history.json_data = json.dumps({"_raw": str(json_payload)}, ensure_ascii=False)
 
-#     history.save(ignore_permissions=True)
+    history.save(ignore_permissions=True)
 
-#     # Consider success only if basic fields exist
-#     min_conf = 40  # you can tune this later
-#     if history.full_name and history.id_no and (history.confidence or 0) >= min_conf:
-#         return True
+    # Consider success only if basic fields exist
+    min_conf = 40  # you can tune this later
+    if history.full_name and history.id_no and (history.confidence or 0) >= min_conf:
+        return True
     
-#     return False
+    return False
 
-# def _finalize_trip_and_kashf(contact, driver_name: str, trip):
-#     """
-#     When expected_passengers == received_images (or more),
-#     fill Passengers from OCR History and send Trip PDF via WhatsApp.
-#     Only runs when route already chosen (enforced by _maybe_finalize_trip).
-#     """
-#     expected = int(getattr(contact, "expected_passengers", 0) or 0)
-#     received = int(getattr(contact, "received_images", 0) or 0)
+def _finalize_trip_and_kashf(contact, driver_name: str, trip):
+    """
+    When expected_passengers == received_images (or more),
+    fill Passengers from OCR History and send Trip PDF via WhatsApp.
+    Only runs when route already chosen (enforced by _maybe_finalize_trip).
+    """
+    expected = int(getattr(contact, "expected_passengers", 0) or 0)
+    received = int(getattr(contact, "received_images", 0) or 0)
 
-#     if expected <= 0 or received <= 0:
-#         return
+    if expected <= 0 or received <= 0:
+        return
 
-#     # 0) Apply chosen route to Trip if available
-#     preferred_route = getattr(contact, "preferred_route", None)
-#     if preferred_route and trip.trip_route != preferred_route:
-#         trip.trip_route = preferred_route
+    # 0) Apply chosen route to Trip if available
+    preferred_route = getattr(contact, "preferred_route", None)
+    if preferred_route and trip.trip_route != preferred_route:
+        trip.trip_route = preferred_route
 
-#     # 1) Get OCR History rows for this Trip
-#     ocr_rows = frappe.get_all(
-#         "OCR History",
-#         filters={"trip": trip.name},
-#         fields=["name", "full_name", "id_no", "nationality"],
-#         order_by="creation asc",
-#     )
+    # 1) Get OCR History rows for this Trip
+    ocr_rows = frappe.get_all(
+        "OCR History",
+        filters={"trip": trip.name},
+        fields=["name", "full_name", "id_no", "nationality"],
+        order_by="creation asc",
+    )
 
-#     # Only use up to expected rows
-#     ocr_rows = ocr_rows[:expected]
+    # Only use up to expected rows
+    ocr_rows = ocr_rows[:expected]
 
-#     # 2) (optional) clear previous passengers if you want a clean rebuild
-#     # trip.set("passengers", [])
+    # 2) (optional) clear previous passengers if you want a clean rebuild
+    # trip.set("passengers", [])
 
-#     # 3) Fill Passengers table from OCR
-#     for row in ocr_rows:
-#         passenger = trip.append("passengers", {})
-#         passenger.passenger_name = row.get("full_name") or ""
-#         passenger.idpassport_no = row.get("id_no") or ""
-#         passenger.nationality = row.get("nationality") or ""
+    # 3) Fill Passengers table from OCR
+    for row in ocr_rows:
+        passenger = trip.append("passengers", {})
+        passenger.passenger_name = row.get("full_name") or ""
+        passenger.idpassport_no = row.get("id_no") or ""
+        passenger.nationality = row.get("nationality") or ""
 
-#     trip.save(ignore_permissions=True)
-#     trip.add_comment(
-#         "Info",
-#         f"Passengers auto-filled from WhatsApp OCR at {now_datetime()}."
-#     )
+    trip.save(ignore_permissions=True)
+    trip.add_comment(
+        "Info",
+        f"Passengers auto-filled from WhatsApp OCR at {now_datetime()}."
+    )
 
-#     # 4) Send Kashf (Trip PDF) via existing function
-#     try:
-#         send_trip_pdf_via_whatsapp(trip.name)
-#     except Exception:
-#         frappe.log_error("Kashf send failed", f"Trip: {trip.name}")
+    # 4) Send Kashf (Trip PDF) via existing function
+    try:
+        send_trip_pdf_via_whatsapp(trip.name)
+    except Exception:
+        frappe.log_error("Kashf send failed", f"Trip: {trip.name}")
 
-#     # 5) Inform driver
-#     sender_no = contact.whatsapp_id
-#     msg = (
-#         "✅ All passenger documents received, route set, and your Kashf has been prepared and sent.\n"
-#         "✅ تم استلام جميع مستندات الركاب، وتثبيت خط السير، وتم تجهيز كشف الرحلة وإرساله لك.\n"
-#         "✅ تمام، سب مسافروں کے دستاویزات اور روٹ سیٹ ہو گیا، آپ کا کشف تیار ہو کر بھیج دیا گیا ہے۔"
-#     )
-#     _send_plain_message(sender_no, msg)
+    # 5) Inform driver
+    sender_no = contact.whatsapp_id
+    msg = (
+        "✅ All passenger documents received, route set, and your Kashf has been prepared and sent.\n"
+        "✅ تم استلام جميع مستندات الركاب، وتثبيت خط السير، وتم تجهيز كشف الرحلة وإرساله لك.\n"
+        "✅ تمام، سب مسافروں کے دستاویزات اور روٹ سیٹ ہو گیا، آپ کا کشف تیار ہو کر بھیج دیا گیا ہے۔"
+    )
+    _send_plain_message(sender_no, msg)
 
-#     # 6) Reset bot state for next trip
-#     _update_contact_state(
-#         contact,
-#         bot_state="DONE",
-#         expected_passengers=0,
-#         received_images=0,
-#         # keep current_trip so you can see last trip on contact
-#     )
-# def _maybe_finalize_trip(contact, driver_name: str, trip) -> bool:
-#     """
-#     Check if we have enough info to finalize:
-#     - expected_passengers is set
-#     - received_images >= expected_passengers
-#     - route chosen (preferred_route)
-#     If yes → call _finalize_trip_and_kashf and return True.
-#     """
-#     expected = int(getattr(contact, "expected_passengers", 0) or 0)
-#     received = int(getattr(contact, "received_images", 0) or 0)
-#     preferred_route = getattr(contact, "preferred_route", None)
+    # 6) Reset bot state for next trip
+    _update_contact_state(
+        contact.db_set("bot_state", "DONE", update_modified=False)
 
-#     if expected > 0 and received >= expected and preferred_route:
-#         _finalize_trip_and_kashf(contact, driver_name, trip)
-#         return True
+        # keep current_trip so you can see last trip on contact
+    )
+def _maybe_finalize_trip(contact, driver_name: str, trip) -> bool:
+    """
+    Check if we have enough info to finalize:
+    - expected_passengers is set
+    - received_images >= expected_passengers
+    - route chosen (preferred_route)
+    If yes → call _finalize_trip_and_kashf and return True.
+    """
+    expected = int(getattr(contact, "expected_passengers", 0) or 0)
+    received = int(getattr(contact, "received_images", 0) or 0)
+    preferred_route = getattr(contact, "preferred_route", None)
 
-#     return False
+    if expected > 0 and received >= expected and preferred_route:
+        _finalize_trip_and_kashf(contact, driver_name, trip)
+        return True
+
+    return False
 
 
-# # ---------------------------------------------------------------------------
-# # WhatsApp send helpers (local)
-# # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# WhatsApp send helpers (local)
+# ---------------------------------------------------------------------------
 
-# def _send_thread_reply(incoming_doc, message: str):
-#     """Create a reply message (is_reply=1, uses incoming.message_id)."""
-#     to = normalize_phone(getattr(incoming_doc, "from_", "") or getattr(incoming_doc, "from", "") or "")
-#     if not to:
-#         return
+def _send_thread_reply(incoming_doc, message: str):
+    """Create a reply message (is_reply=1, uses incoming.message_id)."""
+    to = normalize_phone(getattr(incoming_doc, "from_", "") or getattr(incoming_doc, "from", "") or "")
+    if not to:
+        return
 
-#     reply = frappe.get_doc({
-#         "doctype": "WhatsApp Message",
-#         "type": "Outgoing",
-#         "to": to,
-#         "content_type": "text",
-#         "message": message,
-#         "message_type": "Manual",
-#         "is_reply": 1,
-#         "reply_to_message_id": incoming_doc.message_id,
-#     })
-#     reply.insert(ignore_permissions=True)
-#     return reply.name
+    reply = frappe.get_doc({
+        "doctype": "WhatsApp Message",
+        "type": "Outgoing",
+        "to": to,
+        "content_type": "text",
+        "message": message,
+        "message_type": "Manual",
+        "is_reply": 1,
+        "reply_to_message_id": incoming_doc.message_id,
+    })
+    reply.insert(ignore_permissions=True)
+    return reply.name
 
 
-# def _send_plain_message(to: str, message: str):
-#     """Non-thread text message (for final Kashf notification)."""
-#     to = normalize_phone(to)
-#     if not to:
-#         return
+def _send_plain_message(to: str, message: str):
+    """Non-thread text message (for final Kashf notification)."""
+    to = normalize_phone(to)
+    if not to:
+        return
 
-#     msg = frappe.get_doc({
-#         "doctype": "WhatsApp Message",
-#         "type": "Outgoing",
-#         "to": to,
-#         "content_type": "text",
-#         "message": message,
-#         "message_type": "Manual",
-#     })
-#     msg.insert(ignore_permissions=True)
-#     return msg.name
+    msg = frappe.get_doc({
+        "doctype": "WhatsApp Message",
+        "type": "Outgoing",
+        "to": to,
+        "content_type": "text",
+        "message": message,
+        "message_type": "Manual",
+    })
+    msg.insert(ignore_permissions=True)
+    return msg.name

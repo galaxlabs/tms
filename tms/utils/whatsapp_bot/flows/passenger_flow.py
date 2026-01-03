@@ -1,42 +1,36 @@
+# apps/tms/tms/utils/whatsapp_bot/flows/passenger_flow.py
+from tms.utils.whatsapp_bot.helpers.json_store import get_json
 import frappe
-from tms.utils.bot_settings import get_settings
+
 
 def write_passengers_and_finalize(trip, contact, lang):
-    settings, _ = get_settings()
-    threshold = float(settings.confidence_threshold or 0)
-
+    """
+    Prefer passengers stored on contact.received_files_json["passengers"].
+    Avoid duplicates.
+    Returns count added.
+    """
     if trip.get("passengers"):
-        return  # avoid duplicates
+        return 0  # avoid duplicates
 
-    ocr_rows = frappe.get_all(
-        "OCR History",
-        filters={"trip": trip.name},
-        fields=["full_name", "id_no", "nationality", "confidence"],
-        order_by="creation asc",
-    )
+    state = get_json(contact, "received_files_json", {}) or {}
+    passengers = state.get("passengers") or []
 
-    count = 0
-    for row in ocr_rows:
-        name = (row.full_name or "").strip()
-        id_no = (row.id_no or "").strip()
-        nat = (row.nationality or "").strip()
-        conf = float(row.confidence or 0)
-
-        if conf > 1:
-            conf = conf / 100
+    added = 0
+    for p in passengers:
+        name = (p.get("full_name") or p.get("passenger_name") or "").strip()
+        id_no = (p.get("id_no") or p.get("idpassport_no") or "").strip()
+        nat = (p.get("nationality") or "").strip()
 
         if not name or not id_no:
             continue
-        if threshold and conf < threshold:
-            continue
 
-        p = trip.append("passengers", {})
-        p.passenger_name = name
-        p.idpassport_no = id_no
-        p.nationality = nat
-        count += 1
+        row = trip.append("passengers", {})
+        row.passenger_name = name
+        row.idpassport_no = id_no
+        row.nationality = nat
+        added += 1
 
-    if count:
+    if added:
         trip.save(ignore_permissions=True)
 
-    return count
+    return added

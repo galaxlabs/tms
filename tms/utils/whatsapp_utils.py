@@ -28,12 +28,15 @@ def can_send_session_message(phone: str) -> bool:
 # ---------------------------------------------------------------------------
 # Small helpers
 # ---------------------------------------------------------------------------
-
 def normalize_phone(number: str | None) -> str:
-    """Normalize phone by stripping spaces and hyphens."""
     if not number:
         return ""
-    return number.replace(" ", "").replace("-", "").strip()
+    n = str(number).strip().replace(" ", "").replace("-", "")
+    if n.startswith("00"):
+        n = n[2:]
+    if n.startswith("+"):
+        n = n[1:]
+    return n
 
 
 def _staff_by_phone(raw_phone: str):

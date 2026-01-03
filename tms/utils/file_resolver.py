@@ -1,29 +1,48 @@
-# tms/utils/file_resolver.py
-import frappe
-import os
+# apps/tms/tms/utils/file_resolver.py
+from __future__ import annotations
 
-def file_url_to_path(file_url: str) -> str | None:
+import os
+import frappe
+from frappe.utils import get_bench_path
+
+
+def _abs_site_path() -> str:
     """
-    Works for Frappe File URLs like:
-      /private/files/xxx.jpg
-      /files/xxx.jpg
-    Also works if file_url is actually File.name (less common).
+    Always return absolute site path regardless of process CWD.
     """
+    site = getattr(frappe.local, "site", None) or frappe.local.site
+    return os.path.join(get_bench_path(), "sites", site)
+
+
+def file_url_to_path(file_url: str | None) -> str | None:
     if not file_url:
         return None
 
-    # If a File doc exists with this file_url
-    f = frappe.db.get_value("File", {"file_url": file_url}, ["name", "file_url", "is_private"], as_dict=True)
-    if not f:
-        # maybe file_url is the File name
-        if frappe.db.exists("File", file_url):
-            f = frappe.get_doc("File", file_url)
-            file_url = f.file_url
-        else:
-            return None
+    url = str(file_url).strip()
+    if not url:
+        return None
 
-    site_path = frappe.get_site_path()
-    # file_url starts with /private/files/... or /files/...
-    rel = (file_url or "").lstrip("/")
-    abs_path = os.path.join(site_path, rel)
-    return abs_path if os.path.exists(abs_path) else None
+    # Absolute filesystem path already
+    if os.path.isabs(url) and os.path.exists(url):
+        return url
+
+    site_path = _abs_site_path()
+
+    # /private/files/xxx
+    if url.startswith("/private/files/"):
+        fname = url.split("/private/files/", 1)[1]
+        p = os.path.join(site_path, "private", "files", fname)
+        return p if os.path.exists(p) else None
+
+    # /files/xxx
+    if url.startswith("/files/"):
+        fname = url.split("/files/", 1)[1]
+        p = os.path.join(site_path, "public", "files", fname)
+        return p if os.path.exists(p) else None
+
+    # Fallback: try File doctype lookup (if someone passed an old/redirected URL)
+    file_doc_url = frappe.db.get_value("File", {"file_url": url}, "file_url")
+    if file_doc_url and file_doc_url != url:
+        return file_url_to_path(file_doc_url)
+
+    return None

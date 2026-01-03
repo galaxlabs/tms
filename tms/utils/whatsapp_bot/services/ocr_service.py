@@ -1,5 +1,5 @@
 from tms.utils.passenger_ocr_service import process_passenger_images_batch
-from tms.utils.whatsapp_bot.helpers.json_store import get_json
+from tms.utils.whatsapp_bot.helpers.json_store import get_json, set_json
 from tms.utils.whatsapp_bot.flows.resend_flow import start_resend_cycle
 
 def run_batch_ocr(ctx):
@@ -21,5 +21,12 @@ def run_batch_ocr(ctx):
         if resend:
             start_resend_cycle(doc, contact, lang, resend)
         return {"ok": False, "resend_indexes": resend}
+
+    # ✅ store passengers in contact (so route/finalize can use it)
+    passengers = result.get("passengers") or []
+    state = get_json(contact, "received_files_json", {}) or {}
+    state["passengers"] = passengers
+    set_json(contact, "received_files_json", state)
+    contact.save(ignore_permissions=True)
 
     return {"ok": True, "resend_indexes": []}

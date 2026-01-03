@@ -1,0 +1,177 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-01-03 01:52:43.332350",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "contact",
+  "expected_passengers",
+  "received_count",
+  "notes",
+  "column_break_obxb",
+  "whatsapp_id",
+  "status",
+  "resend_ptr",
+  "done_at",
+  "active_batch_key",
+  "column_break_snxz",
+  "staff",
+  "trip",
+  "created_at",
+  "last_inbound_at",
+  "trip_mode",
+  "section_break_ldlz",
+  "items",
+  "section_break_kuoi",
+  "resend_indexes_json",
+  "route_names_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "contact",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Contact",
+   "options": "WhatsApp Contact"
+  },
+  {
+   "fieldname": "column_break_obxb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "contact.whatsapp_id",
+   "fieldname": "whatsapp_id",
+   "fieldtype": "Data",
+   "label": "whatsapp_id"
+  },
+  {
+   "fieldname": "column_break_snxz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "staff",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Staff",
+   "options": "Staff"
+  },
+  {
+   "fieldname": "trip",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "trip",
+   "options": "Trip"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "COLLECTING\nOCR_PROCESSING\nRESENDING\nDONE\nCANCELLED"
+  },
+  {
+   "fieldname": "expected_passengers",
+   "fieldtype": "Int",
+   "label": "expected_passengers"
+  },
+  {
+   "fieldname": "received_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "received_count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "resend_ptr",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "resend_ptr"
+  },
+  {
+   "fieldname": "section_break_ldlz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_kuoi",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "resend_indexes_json",
+   "fieldtype": "Code",
+   "label": "resend_indexes_json",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "notes"
+  },
+  {
+   "fieldname": "done_at",
+   "fieldtype": "Datetime",
+   "label": "done_at"
+  },
+  {
+   "default": "Now",
+   "fieldname": "created_at",
+   "fieldtype": "Datetime",
+   "label": "created_at"
+  },
+  {
+   "fieldname": "last_inbound_at",
+   "fieldtype": "Datetime",
+   "label": "last_inbound_at"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "options": "WhatsApp Media Batch Item"
+  },
+  {
+   "fieldname": "active_batch_key",
+   "fieldtype": "Data",
+   "label": "active_batch_key"
+  },
+  {
+   "fieldname": "route_names_json",
+   "fieldtype": "Code",
+   "label": "route_names_json",
+   "options": "JSON"
+  },
+  {
+   "default": "ONEWAY",
+   "fieldname": "trip_mode",
+   "fieldtype": "Select",
+   "label": "trip_mode",
+   "options": "ONEWAY\nRETURN"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-01-03 17:11:37.353603",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "WhatsApp Media Batch",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -9,6 +9,8 @@
  "engine": "InnoDB",
  "field_order": [
   "kashf_sent",
+  "column_break_eufa",
+  "is_return_trip",
   "section_break_dvfs",
   "driver",
   "trip_route",
@@ -20,6 +22,8 @@
   "driver_share",
   "trip_status",
   "mobile_no",
+  "duration_minutes",
+  "arrived_at",
   "column_break_rklb",
   "assigned_vehicle",
   "date",
@@ -50,22 +54,21 @@
    "search_index": 1
   },
   {
-   "default": "Madina-Makkah",
    "fieldname": "trip_route",
    "fieldtype": "Link",
    "label": "Trip Route",
    "options": "Route"
   },
   {
-   "fetch_from": "trip_route.from_city",
+   "fetch_from": "trip_route.from_place_full",
    "fieldname": "from_location",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "label": "From"
   },
   {
-   "fetch_from": "trip_route.to_city",
+   "fetch_from": "trip_route.to_place_full",
    "fieldname": "to_location",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "label": "To"
   },
   {
@@ -227,13 +230,35 @@
    "fieldtype": "Float",
    "hidden": 1,
    "label": "Avg Speed (km/h)"
+  },
+  {
+   "fetch_from": "trip_route.duration_minutes",
+   "fieldname": "duration_minutes",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "Duration (Minutes)"
+  },
+  {
+   "fieldname": "column_break_eufa",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_return_trip",
+   "fieldtype": "Check",
+   "label": "Is Return Trip"
+  },
+  {
+   "fieldname": "arrived_at",
+   "fieldtype": "Datetime",
+   "label": "Arrrived at"
   }
  ],
  "grid_page_length": 50,
  "has_web_view": 1,
  "image_field": "qr_code",
  "links": [],
- "modified": "2025-12-27 22:11:55.961186",
+ "modified": "2026-01-03 20:11:18.119827",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "Trip",
@@ -269,7 +294,20 @@
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
+ "states": [
+  {
+   "color": "Blue",
+   "title": "Scheduled"
+  },
+  {
+   "color": "Green",
+   "title": "Departed"
+  },
+  {
+   "color": "Purple",
+   "title": "Arrived"
+  }
+ ],
  "track_changes": 1,
  "track_seen": 1,
  "track_views": 1

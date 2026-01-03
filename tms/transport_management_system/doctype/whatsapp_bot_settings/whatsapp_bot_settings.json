@@ -6,13 +6,21 @@
  "engine": "InnoDB",
  "field_order": [
   "enabled",
+  "ack_each_document",
+  "progress_every_n",
   "default_language",
   "max_passengers",
+  "gemini_model",
+  "gemini_timeout_ms",
   "column_break_exjo",
   "resend_on_low_confidence",
   "conversation_hours",
   "max_resend_attempts",
   "confidence_threshold",
+  "retention_media_days",
+  "retention_logs_days",
+  "retention_trips_days",
+  "retention_ocr_raw_days",
   "section_break_chpj",
   "message_templates"
  ],
@@ -24,10 +32,11 @@
    "label": "Enabled"
   },
   {
+   "default": "English\nArabic\nUrdu",
    "fieldname": "default_language",
-   "fieldtype": "Select",
+   "fieldtype": "Small Text",
    "label": "Language",
-   "options": "Eng\nAr\nUr"
+   "options": "English\nArabic\nUrdu"
   },
   {
    "fieldname": "max_passengers",
@@ -68,13 +77,59 @@
    "fieldtype": "Code",
    "label": "Message Templates",
    "options": "Json"
+  },
+  {
+   "default": "gemini-2.5-flash",
+   "fieldname": "gemini_model",
+   "fieldtype": "Select",
+   "options": "gemini-2.5-flash"
+  },
+  {
+   "fieldname": "gemini_timeout_ms",
+   "fieldtype": "Int"
+  },
+  {
+   "default": "0",
+   "fieldname": "ack_each_document",
+   "fieldtype": "Check",
+   "label": "Single Proccess"
+  },
+  {
+   "default": "11",
+   "fieldname": "progress_every_n",
+   "fieldtype": "Int",
+   "label": "Progress Count"
+  },
+  {
+   "default": "30",
+   "fieldname": "retention_media_days",
+   "fieldtype": "Int",
+   "hidden": 1
+  },
+  {
+   "default": "30",
+   "fieldname": "retention_logs_days",
+   "fieldtype": "Int",
+   "hidden": 1
+  },
+  {
+   "default": "30",
+   "fieldname": "retention_trips_days",
+   "fieldtype": "Int",
+   "hidden": 1
+  },
+  {
+   "default": "30",
+   "fieldname": "retention_ocr_raw_days",
+   "fieldtype": "Int",
+   "hidden": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-12-30 04:26:22.957777",
+ "modified": "2026-01-03 10:03:20.612790",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "WhatsApp Bot Settings",

@@ -147,36 +147,6 @@ app_license = "mit"
 
 # Scheduled Tasks
 # ---------------
-scheduler_events = {
-    "all": [
-        "tms.utils.trigger_whatsapp_notifications_all"
-    ],
-    "hourly": [
-        "tms.utils.trigger_whatsapp_notifications_hourly"
-    ],
-    "hourly_long": [
-        "tms.utils.trigger_whatsapp_notifications_hourly_long"
-    ],
-    "daily": [
-        "tms.utils.trigger_whatsapp_notifications_daily",
-        "tms.transport_management_system.doctype.whatsapp_notification.whatsapp_notification.trigger_notifications",
-    ],
-    "daily_long": [
-        "tms.utils.trigger_whatsapp_notifications_daily_long",
-    ],
-    "weekly": [
-        "tms.utils.trigger_whatsapp_notifications_weekly",
-    ],
-    "weekly_long": [
-        "tms.utils.trigger_whatsapp_notifications_weekly_long",
-    ],
-    "monthly": [
-        "tms.utils.trigger_whatsapp_notifications_monthly",
-    ],
-    "monthly_long": [
-        "tms.utils.trigger_whatsapp_notifications_monthly_long",
-    ],
-}
 # scheduler_events = {
 # 	"all": [
 # 		"tms.tasks.all"
@@ -270,15 +240,53 @@ scheduler_events = {
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
-
 scheduler_events = {
-	"cron": {
-		"0 6 1 * *": [
-			"tms.hotels.api.rental.auto_generate_rent_invoices"
-		]
-	}
+    # -------------------------
+    # CRON (specific times)
+    # -------------------------
+    "cron": {
+        # At 06:00 on day 1 of every month
+        "0 6 1 * *": [
+            "tms.hotels.api.rental.auto_generate_rent_invoices",
+        ],
+    },
 
-	}
+    # -------------------------
+    # Standard frequencies
+    # -------------------------
+    "all": [
+        "tms.utils.trigger_whatsapp_notifications_all",
+    ],
+    "hourly": [
+        "tms.utils.trigger_whatsapp_notifications_hourly",
+    ],
+    "hourly_long": [
+        "tms.utils.trigger_whatsapp_notifications_hourly_long",
+    ],
+    "daily": [
+        "tms.utils.trigger_whatsapp_notifications_daily",
+        "tms.transport_management_system.doctype.whatsapp_notification.whatsapp_notification.trigger_notifications",
+
+        # ✅ your retention cleanup
+        "tms.utils.retention.run_daily_cleanup",
+    ],
+    "daily_long": [
+        "tms.utils.trigger_whatsapp_notifications_daily_long",
+    ],
+    "weekly": [
+        "tms.utils.trigger_whatsapp_notifications_weekly",
+    ],
+    "weekly_long": [
+        "tms.utils.trigger_whatsapp_notifications_weekly_long",
+    ],
+    "monthly": [
+        "tms.utils.trigger_whatsapp_notifications_monthly",
+    ],
+    "monthly_long": [
+        "tms.utils.trigger_whatsapp_notifications_monthly_long",
+    ],
+}
+
 doc_events = {
     "*": {
         "before_insert": "tms.utils.run_server_script_for_doc_event",
@@ -298,6 +306,7 @@ doc_events = {
 
     "WhatsApp Message": {
         "after_insert": "tms.utils.whatsapp_bot.entry.handle_incoming_whatsapp",
+        "on_update": "tms.utils.whatsapp_bot.entry.handle_incoming_whatsapp",
     },
     
     "Trip": {
