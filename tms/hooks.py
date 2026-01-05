@@ -249,6 +249,9 @@ scheduler_events = {
         "0 6 1 * *": [
             "tms.hotels.api.rental.auto_generate_rent_invoices",
         ],
+        "*/5 * * * *": [
+            "tms.utils.trip_lifecycle.auto_mark_trips_arrived"
+        ]
     },
 
     # -------------------------
@@ -268,7 +271,7 @@ scheduler_events = {
         "tms.transport_management_system.doctype.whatsapp_notification.whatsapp_notification.trigger_notifications",
 
         # ✅ your retention cleanup
-        "tms.utils.retention.run_daily_cleanup",
+        # "tms.utils.retention.run_daily_cleanup",
     ],
     "daily_long": [
         "tms.utils.trigger_whatsapp_notifications_daily_long",

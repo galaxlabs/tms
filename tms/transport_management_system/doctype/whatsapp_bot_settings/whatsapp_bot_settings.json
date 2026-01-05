@@ -7,11 +7,14 @@
  "field_order": [
   "enabled",
   "ack_each_document",
+  "staff_only_mode",
+  "require_language_choice",
   "progress_every_n",
   "default_language",
   "max_passengers",
   "gemini_model",
   "gemini_timeout_ms",
+  "supported_languages",
   "column_break_exjo",
   "resend_on_low_confidence",
   "conversation_hours",
@@ -21,6 +24,9 @@
   "retention_logs_days",
   "retention_trips_days",
   "retention_ocr_raw_days",
+  "unknown_intent_reply_key",
+  "registration_info_key",
+  "admin_contact_phone",
   "section_break_chpj",
   "message_templates"
  ],
@@ -32,9 +38,8 @@
    "label": "Enabled"
   },
   {
-   "default": "English\nArabic\nUrdu",
    "fieldname": "default_language",
-   "fieldtype": "Small Text",
+   "fieldtype": "Select",
    "label": "Language",
    "options": "English\nArabic\nUrdu"
   },
@@ -123,13 +128,44 @@
    "fieldname": "retention_ocr_raw_days",
    "fieldtype": "Int",
    "hidden": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "require_language_choice",
+   "fieldtype": "Check",
+   "label": "Language Choice"
+  },
+  {
+   "default": "English\nArabic\nUrdu",
+   "fieldname": "supported_languages",
+   "fieldtype": "Small Text",
+   "label": "Supported Languages"
+  },
+  {
+   "default": "0",
+   "fieldname": "staff_only_mode",
+   "fieldtype": "Check",
+   "label": "Only Staff"
+  },
+  {
+   "fieldname": "unknown_intent_reply_key",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "registration_info_key",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "admin_contact_phone",
+   "fieldtype": "Data",
+   "label": "Admin Contact"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-01-03 10:03:20.612790",
+ "modified": "2026-01-05 12:03:03.997685",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "WhatsApp Bot Settings",

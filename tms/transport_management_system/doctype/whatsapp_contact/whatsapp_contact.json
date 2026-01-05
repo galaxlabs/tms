@@ -8,18 +8,31 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "section_break_ktqi",
   "whatsapp_id",
-  "current_trip",
-  "received_images",
+  "display_name",
+  "preferred_language",
+  "language_confirmed",
+  "onboarding_state",
   "staff",
+  "staff_full_name",
+  "is_staff",
+  "active_flow",
+  "last_intent",
+  "last_inbound_at",
   "conversation_expires_at",
   "active_media_batch",
-  "column_break_trsb",
-  "display_name",
+  "current_trip",
   "expected_passengers",
+  "received_images",
   "bot_state",
-  "last_inbound_at",
   "resend_ptr",
+  "last_inbound_message_id",
+  "last_media_message_id",
+  "last_bot_reply_to_mid",
+  "media_batch_started_at",
+  "last_greeted_at",
+  "last_processed_at",
   "section_break_cqsj",
   "received_files_json",
   "collected_file_urls_json",
@@ -79,23 +92,19 @@
    "label": "Conversation Expire At"
   },
   {
-   "fieldname": "column_break_trsb",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "section_break_cqsj",
    "fieldtype": "Section Break"
   },
   {
    "fieldname": "received_files_json",
    "fieldtype": "Long Text",
-   "label": "received_files_json",
+   "label": "Received Files Json",
    "options": "Json"
   },
   {
    "fieldname": "collected_file_urls_json",
    "fieldtype": "Code",
-   "label": "Collected File Urls json",
+   "label": "Collected File URLs (JSON)",
    "options": "Json"
   },
   {
@@ -107,7 +116,7 @@
   {
    "fieldname": "resend_ptr",
    "fieldtype": "Int",
-   "label": "Resend Petren"
+   "label": "Resend Pointer"
   },
   {
    "fieldname": "route",
@@ -118,7 +127,83 @@
   {
    "fieldname": "active_media_batch",
    "fieldtype": "Link",
+   "label": "Active Batch",
    "options": "WhatsApp Media Batch"
+  },
+  {
+   "fieldname": "preferred_language",
+   "fieldtype": "Select",
+   "label": "Preferred Language",
+   "options": "en\nur\nar"
+  },
+  {
+   "default": "0",
+   "fieldname": "language_confirmed",
+   "fieldtype": "Check",
+   "label": "Language Confirmed"
+  },
+  {
+   "fieldname": "section_break_ktqi",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "onboarding_state",
+   "fieldtype": "Select",
+   "label": "Onboarding State",
+   "options": "NEW\nASK_LANG\nDONE"
+  },
+  {
+   "fieldname": "last_greeted_at",
+   "fieldtype": "Datetime",
+   "label": "Last Greeted At"
+  },
+  {
+   "fetch_from": "staff.full_name",
+   "fieldname": "staff_full_name",
+   "fieldtype": "Data",
+   "label": "Staff Full Name"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_staff",
+   "fieldtype": "Check",
+   "label": "Is Staff"
+  },
+  {
+   "fieldname": "last_intent",
+   "fieldtype": "Data",
+   "label": "Last Intent"
+  },
+  {
+   "fieldname": "active_flow",
+   "fieldtype": "Select",
+   "label": "Active Flow",
+   "options": "PUBLIC\nSTAFF\nTRIP\nKASHF"
+  },
+  {
+   "fieldname": "last_processed_at",
+   "fieldtype": "Datetime",
+   "label": "Last Processed At"
+  },
+  {
+   "fieldname": "last_inbound_message_id",
+   "fieldtype": "Data",
+   "label": "Last Inbound Message Id"
+  },
+  {
+   "fieldname": "last_media_message_id",
+   "fieldtype": "Data",
+   "label": "Last Media Message Id"
+  },
+  {
+   "fieldname": "last_bot_reply_to_mid",
+   "fieldtype": "Data",
+   "label": "Last Bot Reply to Message Id"
+  },
+  {
+   "fieldname": "media_batch_started_at",
+   "fieldtype": "Datetime",
+   "label": "Media Batch Started At"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -134,7 +219,7 @@
    "link_fieldname": "to"
   }
  ],
- "modified": "2026-01-03 10:19:19.443715",
+ "modified": "2026-01-05 15:32:31.762997",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "WhatsApp Contact",

@@ -1,0 +1,109 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-01-05 12:12:59.604493",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "priority",
+  "column_break_becm",
+  "staff_required",
+  "column_break_tyoc",
+  "section_break_awvk",
+  "intent_key",
+  "match_type",
+  "match_value",
+  "reply_template_key",
+  "next_state",
+  "handler"
+ ],
+ "fields": [
+  {
+   "fieldname": "intent_key",
+   "fieldtype": "Data",
+   "label": "Intent Key"
+  },
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "priority",
+   "fieldtype": "Int",
+   "label": "Priority"
+  },
+  {
+   "fieldname": "column_break_becm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "staff_required",
+   "fieldtype": "Check",
+   "label": "Staff Required"
+  },
+  {
+   "fieldname": "column_break_tyoc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_awvk",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "match_type",
+   "fieldtype": "Select",
+   "label": "Match Type"
+  },
+  {
+   "fieldname": "match_value",
+   "fieldtype": "Small Text",
+   "label": "Match Value"
+  },
+  {
+   "fieldname": "reply_template_key",
+   "fieldtype": "Data",
+   "label": "Reply Template Key"
+  },
+  {
+   "fieldname": "next_state",
+   "fieldtype": "Data",
+   "label": "Next State"
+  },
+  {
+   "fieldname": "handler",
+   "fieldtype": "Data",
+   "label": "Handler"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-01-05 12:20:33.845377",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "WhatsApp Bot Intent",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
