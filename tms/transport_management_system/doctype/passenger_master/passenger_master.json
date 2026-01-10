@@ -1,0 +1,158 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:identity_key",
+ "creation": "2026-01-05 18:28:39.102317",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "document_type",
+  "column_break_zlpa",
+  "document_number",
+  "column_break_gzeu",
+  "identity_key",
+  "section_break_pgcs",
+  "full_name",
+  "nationality",
+  "is_verified",
+  "first_seen_at",
+  "column_break_xwoz",
+  "full_name_ar",
+  "contact_no",
+  "source",
+  "last_seen_at",
+  "column_break_mjht",
+  "full_name_ur",
+  "expiry_date",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "document_type",
+   "fieldtype": "Select",
+   "label": "Document Type",
+   "options": "Passport\nAqama\nNusuk\nVisa\nOther",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_zlpa",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "document_number",
+   "fieldtype": "Data",
+   "label": "Document Number",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_gzeu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "identity_key",
+   "fieldtype": "Data",
+   "label": "Identity Key",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "section_break_pgcs",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "full_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Full Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "nationality",
+   "fieldtype": "Data",
+   "label": "Nationality"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_verified",
+   "fieldtype": "Check",
+   "label": "Is Verified"
+  },
+  {
+   "fieldname": "column_break_xwoz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "full_name_ar",
+   "fieldtype": "Data",
+   "label": "Full Name Arabic"
+  },
+  {
+   "fieldname": "contact_no",
+   "fieldtype": "Data",
+   "label": "Contact No"
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "label": "Source",
+   "options": "OCR\nBOOKING\nMANUAL"
+  },
+  {
+   "fieldname": "column_break_mjht",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "full_name_ur",
+   "fieldtype": "Data",
+   "label": "Full Name Urdu"
+  },
+  {
+   "fieldname": "expiry_date",
+   "fieldtype": "Date",
+   "label": "Expiry Date"
+  },
+  {
+   "fieldname": "first_seen_at",
+   "fieldtype": "Datetime",
+   "label": "First Seen At"
+  },
+  {
+   "fieldname": "last_seen_at",
+   "fieldtype": "Datetime",
+   "label": "Last Seen At"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-01-05 20:13:59.156891",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "Passenger Master",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -37,7 +37,9 @@
   "received_files_json",
   "collected_file_urls_json",
   "resend_indexes_json",
-  "route"
+  "route",
+  "settings",
+  "bot_enabled"
  ],
  "fields": [
   {
@@ -97,7 +99,7 @@
   },
   {
    "fieldname": "received_files_json",
-   "fieldtype": "Long Text",
+   "fieldtype": "Code",
    "label": "Received Files Json",
    "options": "Json"
   },
@@ -147,6 +149,7 @@
    "fieldtype": "Section Break"
   },
   {
+   "default": "NEW",
    "fieldname": "onboarding_state",
    "fieldtype": "Select",
    "label": "Onboarding State",
@@ -204,6 +207,17 @@
    "fieldname": "media_batch_started_at",
    "fieldtype": "Datetime",
    "label": "Media Batch Started At"
+  },
+  {
+   "default": "1",
+   "fieldname": "bot_enabled",
+   "fieldtype": "Check",
+   "label": "Bot Enabled"
+  },
+  {
+   "fieldname": "settings",
+   "fieldtype": "Tab Break",
+   "label": "Settings"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -219,7 +233,7 @@
    "link_fieldname": "to"
   }
  ],
- "modified": "2026-01-05 15:32:31.762997",
+ "modified": "2026-01-05 16:54:34.825631",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "WhatsApp Contact",

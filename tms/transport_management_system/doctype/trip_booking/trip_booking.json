@@ -1,0 +1,206 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:BK-{MM}-{YYYY}-{######}",
+ "creation": "2026-01-05 18:45:49.252249",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "booking_source",
+  "customer_phone",
+  "column_break_rwqs",
+  "whatsapp_contact",
+  "preferred_language",
+  "column_break_ntgf",
+  "customer_name",
+  "departure_date",
+  "section_break_cgdk",
+  "route",
+  "pickup_location",
+  "column_break_cdzr",
+  "trip_type",
+  "dropoff_location",
+  "column_break_yfvv",
+  "departure_time",
+  "notes",
+  "section_break_fhnu",
+  "passenger_count",
+  "converted_trip",
+  "assigned_staff",
+  "column_break_cozw",
+  "status",
+  "converted_at",
+  "departure_at",
+  "section_break_sknn",
+  "booking_passenger"
+ ],
+ "fields": [
+  {
+   "fieldname": "booking_source",
+   "fieldtype": "Select",
+   "label": "Booking Source",
+   "options": "WHATSAPP\nMANUAL\nWEB"
+  },
+  {
+   "fieldname": "whatsapp_contact",
+   "fieldtype": "Link",
+   "label": "Whatsapp Contact",
+   "options": "WhatsApp Contact"
+  },
+  {
+   "fetch_from": "whatsapp_contact.display_name",
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "label": "Customer Name"
+  },
+  {
+   "fetch_from": "whatsapp_contact.whatsapp_id",
+   "fieldname": "customer_phone",
+   "fieldtype": "Data",
+   "label": "Customer Phone"
+  },
+  {
+   "fieldname": "preferred_language",
+   "fieldtype": "Select",
+   "label": "Preferred Language",
+   "options": "en\nur\nar"
+  },
+  {
+   "fieldname": "column_break_rwqs",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_ntgf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_cgdk",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "route",
+   "fieldtype": "Link",
+   "label": "Route",
+   "options": "Route"
+  },
+  {
+   "fieldname": "column_break_cdzr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "trip_type",
+   "fieldtype": "Select",
+   "label": "Trip Type",
+   "options": "ONEWAY\nRETURN"
+  },
+  {
+   "fieldname": "column_break_yfvv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "departure_date",
+   "fieldtype": "Date",
+   "label": "Departure Date"
+  },
+  {
+   "fieldname": "pickup_location",
+   "fieldtype": "Small Text",
+   "label": "Pickup Location"
+  },
+  {
+   "fieldname": "departure_time",
+   "fieldtype": "Time",
+   "label": "Departure Time"
+  },
+  {
+   "fieldname": "dropoff_location",
+   "fieldtype": "Small Text",
+   "label": "Dropoff Location"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "section_break_fhnu",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "passenger_count",
+   "fieldtype": "Int",
+   "label": "Passenger Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_cozw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "DRAFT\nCONFIRMED\nCANCELLED\nCONVERTED"
+  },
+  {
+   "fieldname": "converted_trip",
+   "fieldtype": "Link",
+   "label": "Converted Trip",
+   "options": "Trip"
+  },
+  {
+   "fieldname": "converted_at",
+   "fieldtype": "Datetime",
+   "label": "Converted At"
+  },
+  {
+   "fieldname": "assigned_staff",
+   "fieldtype": "Link",
+   "label": "Assigned Staff",
+   "options": "Staff"
+  },
+  {
+   "fieldname": "departure_at",
+   "fieldtype": "Datetime",
+   "label": "Departure At"
+  },
+  {
+   "fieldname": "section_break_sknn",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "booking_passenger",
+   "fieldtype": "Table",
+   "label": "Booking Passenger",
+   "options": "Passengers"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-01-10 14:05:06.927583",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "Trip Booking",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

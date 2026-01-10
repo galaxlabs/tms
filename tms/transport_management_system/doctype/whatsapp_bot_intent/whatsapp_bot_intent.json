@@ -6,10 +6,10 @@
  "engine": "InnoDB",
  "field_order": [
   "enabled",
-  "priority",
   "column_break_becm",
   "staff_required",
   "column_break_tyoc",
+  "priority",
   "section_break_awvk",
   "intent_key",
   "match_type",
@@ -22,10 +22,11 @@
   {
    "fieldname": "intent_key",
    "fieldtype": "Data",
-   "label": "Intent Key"
+   "label": "Intent Key",
+   "unique": 1
   },
   {
-   "default": "0",
+   "default": "1",
    "fieldname": "enabled",
    "fieldtype": "Check",
    "label": "Enabled"
@@ -56,9 +57,11 @@
   {
    "fieldname": "match_type",
    "fieldtype": "Select",
-   "label": "Match Type"
+   "label": "Match Type",
+   "options": "COMMAND\nKEYWORD\nREGEX"
   },
   {
+   "default": "COMMAND: start / help\nKEYWORD:booking,book,reserve\nREGEX: raw regex",
    "fieldname": "match_value",
    "fieldtype": "Small Text",
    "label": "Match Value"
@@ -82,7 +85,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-05 12:20:33.845377",
+ "modified": "2026-01-05 16:51:21.258633",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "WhatsApp Bot Intent",

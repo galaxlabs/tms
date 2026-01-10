@@ -23,7 +23,8 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Languge",
-   "options": "English\nUrdu\nArabic"
+   "options": "en\nur\nar",
+   "reqd": 1
   },
   {
    "fieldname": "text",
@@ -36,7 +37,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-01-05 12:10:28.147783",
+ "modified": "2026-01-05 16:43:15.483722",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "WhatsApp Bot Template Text",

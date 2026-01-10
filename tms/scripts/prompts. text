@@ -1,0 +1,775 @@
+# tms/utils/whatsapp_bot/context.py
+import frappe
+from frappe.utils import now_datetime, add_to_date
+
+from tms.utils.bot_settings import get_settings, normalize_lang
+from tms.utils.whatsapp_utils import normalize_phone, get_or_create_contact
+from tms.utils.whatsapp_bot.helpers.messaging import send_reply
+
+
+def build_context(doc):
+    """
+    Returns a dict context used by router/handlers:
+    {
+      "doc", "settings", "lang", "contact", "driver", "driver_name", "trip"
+    }
+    """
+    settings, _ = get_settings()
+    if not int(settings.enabled or 0):
+        return None
+
+    lang = normalize_lang(settings.default_language)
+
+    sender = normalize_phone(doc.get("from") or doc.get("from_") or "")
+    contact = get_or_create_contact(sender, doc.profile_name or "")
+    if not contact:
+        return None
+
+    # update conversation window (single UPDATE)
+    now = now_datetime()
+    hours = int(settings.conversation_hours or 24)
+    expires = add_to_date(now, hours=hours)
+
+    updates = {
+        "last_inbound_at": now,
+        "conversation_expires_at": expires,
+    }
+    frappe.db.set_value(contact.doctype, contact.name, updates, update_modified=False)
+
+    # keep in-memory doc in sync
+    contact.last_inbound_at = now
+    contact.conversation_expires_at = expires
+
+    # ---- driver lookup (get name + full_name) ----
+    driver_row = frappe.db.get_value(
+        "Staff",
+        {"mobile_no": ["like", f"%{sender[-9:]}"]},
+        ["name", "full_name"],
+        as_dict=True,
+    )
+
+    if not driver_row:
+        send_reply(doc, "not_registered_driver", lang)
+        return None
+
+    driver_id = driver_row.get("name")
+    driver_full_name = (driver_row.get("full_name") or "").strip()
+
+    # fallback if full_name empty
+    if not driver_full_name:
+        driver_full_name = (doc.profile_name or "").strip() or driver_id
+
+    trip = None
+    if getattr(contact, "current_trip", None) and frappe.db.exists("Trip", contact.current_trip):
+        trip = frappe.get_doc("Trip", contact.current_trip)
+
+    return {
+        "doc": doc,
+        "settings": settings,
+        "lang": lang,
+        "contact": contact,
+        "driver": driver_id,              # Staff docname (id)
+        "driver_name": driver_full_name,  # Staff.full_name (display name)
+        "trip": trip,
+    }
+
+# apps/tms/tms/utils/whatsapp_bot/handlers/text.py
+import re
+import frappe
+
+from tms.utils.whatsapp_bot.helpers.messaging import send_reply
+from tms.utils.whatsapp_bot.helpers.json_store import get_json, set_json
+from tms.utils.whatsapp_bot.flows.trip_flow import get_or_create_trip
+from tms.utils.whatsapp_bot.flows.route_flow import handle_route_choice
+from tms.utils.bot_settings import get_settings
+
+
+def handle_text(ctx):
+    doc = ctx["doc"]
+    contact = ctx["contact"]
+    lang = ctx["lang"]
+    driver = ctx.get("driver")
+    driver_name = ctx.get("driver_name") or (doc.profile_name or "").strip() or "Driver"
+
+    text = (doc.message or "").strip()
+    t = text.lower().strip()
+
+    # debug log (safe)
+    try:
+        frappe.log_error(
+            "WA BOT TEXT",
+            f"contact={contact.name} state={getattr(contact,'bot_state',None)} "
+            f"text={repr(text)} mid={getattr(doc,'message_id',None)}",
+        )
+    except Exception:
+        pass
+
+    if not text:
+        send_reply(doc, "ask_passenger_count_invalid", lang, fallback="ℹ️ Please send a message.", driver_name=driver_name)
+        return
+
+    # GLOBAL COMMANDS
+    if t in ("start", "reset", "new", "begin"):
+        _reset_contact_state(contact)
+        send_reply(
+            doc,
+            "ask_passenger_count",
+            lang,
+            fallback="✅ Started. Send number of passengers (example: 3).",
+            driver_name=driver_name,
+        )
+        return
+
+    state = _get_state(contact)
+
+    # RESEND MODE
+    if state == "RESENDING_DOCS":
+        resend = get_json(contact, "resend_indexes_json", []) or []
+        ptr = int(getattr(contact, "resend_ptr", 0) or 0)
+
+        if ptr < len(resend):
+            n = int(resend[ptr])
+            send_reply(
+                doc,
+                "resend_document",
+                lang,
+                fallback="⚠️ Passenger #{n} document is not clear. Please resend passenger #{n} as image/document.",
+                n=n,
+                driver_name=driver_name,
+            )
+            return
+
+        send_reply(
+            doc,
+            "resend_done_wait",
+            lang,
+            fallback="✅ Resend finished. Please send remaining docs or type 'reset'.",
+            driver_name=driver_name,
+        )
+        return
+
+    # OCR PROCESSING
+    if state == "OCR_PROCESSING":
+        send_reply(
+            doc,
+            "ocr_processing",
+            lang,
+            fallback="⏳ Processing documents… please wait, or type 'reset' to start again.",
+            driver_name=driver_name,
+        )
+        return
+
+    # COLLECTING DOCS
+    if state == "COLLECTING_DOCS":
+        expected = int(getattr(contact, "expected_passengers", 0) or 0)
+        received = int(getattr(contact, "received_images", 0) or 0)
+        remaining = max(expected - received, 0)
+
+        send_reply(
+            doc,
+            "ask_send_docs",
+            lang,
+            fallback="📎 Please send passenger documents. Received: {received}/{expected}. Remaining: {remaining}.",
+            received=received,
+            expected=expected,
+            remaining=remaining,
+            driver_name=driver_name,
+        )
+        return
+
+    # ROUTE SELECTION
+    if state == "WAITING_ROUTE":
+        n = _extract_digits_1_2(text)
+        if n is None:
+            send_reply(doc, "route_invalid", lang, fallback="❗ Please reply with the route number (example: 2).", driver_name=driver_name)
+            return
+
+        ok = handle_route_choice(ctx, n)
+        if not ok:
+            send_reply(doc, "route_invalid", lang, fallback="❗ Please reply with the route number (example: 2).", driver_name=driver_name)
+        return
+
+    # DONE
+    if state == "DONE":
+        if t in ("new trip", "newtrip", "new_trip"):
+            _reset_contact_state(contact)
+            send_reply(
+                doc,
+                "ask_passenger_count",
+                lang,
+                fallback="✅ New trip started. Send passenger count (example: 3).",
+                driver_name=driver_name,
+            )
+            return
+
+        send_reply(
+            doc,
+            "trip_done",
+            lang,
+            fallback="✅ Trip is already completed. Type 'new' for new trip or 'reset' to start again.",
+            n=int(getattr(contact, "expected_passengers", 0) or 0),
+            driver_name=driver_name,
+        )
+        return
+
+    # PASSENGER COUNT
+    if state in ("", "WAITING_PASSENGER_COUNT", "START"):
+        n = _extract_digits_1_2(text)
+        if n is None or n <= 0:
+            send_reply(doc, "ask_passenger_count_invalid", lang, fallback="ℹ️ Send number of passengers only (example: 3).", driver_name=driver_name)
+            return
+
+        settings, _meta = get_settings()
+        max_p = int(getattr(settings, "max_passengers", 0) or 0)
+        if max_p and n > max_p:
+            send_reply(doc, "max_passengers_exceeded", lang, fallback="❗ Max passengers allowed is {max}.", max=max_p, driver_name=driver_name)
+            return
+
+        # single update (NO save)
+        frappe.db.set_value(
+            contact.doctype,
+            contact.name,
+            {
+                "expected_passengers": int(n),
+                "received_images": 0,
+                "resend_ptr": 0,
+                "bot_state": "COLLECTING_DOCS",
+                "collected_file_urls_json": "[]",
+                "resend_indexes_json": "[]",
+                "received_files_json": "{}",
+            },
+            update_modified=False,
+        )
+
+        # in-memory sync
+        contact.expected_passengers = int(n)
+        contact.received_images = 0
+        contact.resend_ptr = 0
+        contact.bot_state = "COLLECTING_DOCS"
+        contact.collected_file_urls_json = "[]"
+        contact.resend_indexes_json = "[]"
+        contact.received_files_json = "{}"
+
+        # create/reuse trip
+        trip = get_or_create_trip(driver, contact)
+        ctx["trip"] = trip
+
+        send_reply(
+            doc,
+            "passenger_count_saved",
+            lang,
+            fallback="✅ Passenger count saved: {expected}. Now send {expected} documents (one per passenger).",
+            expected=n,
+            driver_name=driver_name,
+        )
+        return
+
+    # Default
+    send_reply(doc, "unknown_state", lang, fallback="ℹ️ I’m not sure what to do. Type 'reset' to start again.", driver_name=driver_name)
+
+
+def _get_state(contact) -> str:
+    return (getattr(contact, "bot_state", "") or "").strip().upper()
+
+
+def _reset_contact_state(contact):
+    frappe.db.set_value(
+        contact.doctype,
+        contact.name,
+        {
+            "bot_state": "WAITING_PASSENGER_COUNT",
+            "expected_passengers": 0,
+            "received_images": 0,
+            "resend_ptr": 0,
+            "current_trip": None,
+            "collected_file_urls_json": "[]",
+            "resend_indexes_json": "[]",
+            "received_files_json": "{}",
+        },
+        update_modified=False,
+    )
+
+    contact.bot_state = "WAITING_PASSENGER_COUNT"
+    contact.expected_passengers = 0
+    contact.received_images = 0
+    contact.resend_ptr = 0
+    contact.current_trip = None
+    contact.collected_file_urls_json = "[]"
+    contact.resend_indexes_json = "[]"
+    contact.received_files_json = "{}"
+
+    set_json(contact, "route", [])
+
+
+def _extract_digits_1_2(text: str):
+    s = (text or "").strip()
+    if not re.fullmatch(r"\d{1,2}", s):
+        return None
+    try:
+        return int(s)
+    except Exception:
+        return None
+
+# apps/tms/tms/utils/whatsapp_bot/handlers/media.py
+import frappe
+from tms.utils.whatsapp_bot.helpers.json_store import get_json, set_json
+from tms.utils.whatsapp_bot.helpers.messaging import send_reply
+from tms.utils.passenger_ocr_service import process_passenger_images_batch
+
+
+def handle_media(ctx):
+    doc = ctx["doc"]
+    contact = ctx["contact"]
+    lang = ctx["lang"]
+    driver_name = ctx.get("driver_name") or (doc.profile_name or "").strip() or "Driver"
+
+    state = (getattr(contact, "bot_state", "") or "").strip().upper()
+    file_url = (getattr(doc, "attach", "") or "").strip()
+
+    if not file_url:
+        return
+
+    if state == "OCR_PROCESSING":
+        send_reply(doc, "ocr_processing", lang, fallback="⏳ Processing your documents. Please wait a moment.", driver_name=driver_name)
+        return
+
+    expected = int(getattr(contact, "expected_passengers", 0) or 0)
+    if expected <= 0:
+        send_reply(
+            doc,
+            "ask_passenger_count_invalid",
+            lang,
+            fallback="ℹ️ Send number of passengers first (example: 3).",
+            driver_name=driver_name,
+        )
+        return
+
+    urls = get_json(contact, "collected_file_urls_json", []) or []
+
+    if state != "RESENDING_DOCS" and file_url in urls:
+        return
+
+    # RESENDING MODE
+    if state == "RESENDING_DOCS":
+        resend = get_json(contact, "resend_indexes_json", []) or []
+        ptr = int(getattr(contact, "resend_ptr", 0) or 0)
+
+        if not resend or ptr >= len(resend):
+            return _run_ocr_and_next(doc, contact, lang, driver_name)
+
+        n = int(resend[ptr])
+        idx0 = n - 1
+
+        while len(urls) < expected:
+            urls.append("")
+
+        urls[idx0] = file_url
+        set_json(contact, "collected_file_urls_json", urls)
+
+        new_ptr = ptr + 1
+        frappe.db.set_value(contact.doctype, contact.name, {"resend_ptr": new_ptr}, update_modified=False)
+        contact.resend_ptr = new_ptr
+
+        if new_ptr < len(resend):
+            next_n = int(resend[new_ptr])
+            send_reply(
+                doc,
+                "resend_document",
+                lang,
+                fallback="⚠️ Passenger #{n} document is not clear. Please resend passenger #{n}.",
+                n=next_n,
+                driver_name=driver_name,
+            )
+            return
+
+        return _run_ocr_and_next(doc, contact, lang, driver_name)
+
+    # NORMAL COLLECTING MODE
+    urls.append(file_url)
+    urls = urls[:expected]
+    set_json(contact, "collected_file_urls_json", urls)
+
+    received = len([u for u in urls if u])
+
+    frappe.db.set_value(
+        contact.doctype,
+        contact.name,
+        {"received_images": received, "bot_state": "COLLECTING_DOCS"},
+        update_modified=False,
+    )
+    contact.received_images = received
+    contact.bot_state = "COLLECTING_DOCS"
+
+    if received < expected:
+        send_reply(
+            doc,
+            "doc_progress",
+            lang,
+            fallback="✅ Document {received}/{expected} received. Remaining: {remaining}.",
+            received=received,
+            expected=expected,
+            remaining=(expected - received),
+            driver_name=driver_name,
+        )
+        return
+
+    return _run_ocr_and_next(doc, contact, lang, driver_name)
+
+
+def _run_ocr_and_next(doc, contact, lang, driver_name: str):
+    expected = int(getattr(contact, "expected_passengers", 0) or 0)
+    urls = (get_json(contact, "collected_file_urls_json", []) or [])[:expected]
+
+    trip_name = getattr(contact, "current_trip", None)
+    if not trip_name or not frappe.db.exists("Trip", trip_name):
+        send_reply(doc, "trip_missing", lang, fallback="❗ Trip not found. Type 'reset' and start again.", driver_name=driver_name)
+        return
+
+    frappe.db.set_value(contact.doctype, contact.name, {"bot_state": "OCR_PROCESSING"}, update_modified=False)
+    contact.bot_state = "OCR_PROCESSING"
+
+    # Nice message BEFORE OCR starts
+    send_reply(
+        doc,
+        "all_docs_received_processing",
+        lang,
+        fallback="✅ All documents received ({received}/{expected}). Now processing…",
+        received=len([u for u in urls if u]),
+        expected=expected,
+        driver_name=driver_name,
+    )
+
+    res = process_passenger_images_batch(
+        trip_name=trip_name,
+        file_urls=urls,
+        waba_message=doc.name,
+    )
+
+    if res.get("ok"):
+        set_json(contact, "received_files_json", {"passengers": res.get("passengers") or []})
+        set_json(contact, "resend_indexes_json", [])
+
+        frappe.db.set_value(contact.doctype, contact.name, {"resend_ptr": 0, "bot_state": "WAITING_ROUTE"}, update_modified=False)
+        contact.resend_ptr = 0
+        contact.bot_state = "WAITING_ROUTE"
+
+        from tms.utils.whatsapp_bot.flows.route_flow import send_route_list
+        send_route_list(doc, contact, lang)
+        return
+
+    resend = res.get("resend_indexes") or []
+    set_json(contact, "resend_indexes_json", resend)
+
+    frappe.db.set_value(contact.doctype, contact.name, {"resend_ptr": 0, "bot_state": "RESENDING_DOCS"}, update_modified=False)
+    contact.resend_ptr = 0
+    contact.bot_state = "RESENDING_DOCS"
+
+    n = int(resend[0]) if resend else 1
+    send_reply(
+        doc,
+        "resend_document",
+        lang,
+        fallback="⚠️ Passenger #{n} document is not clear. Please resend passenger #{n}.",
+        n=n,
+        driver_name=driver_name,
+    )
+
+# apps/tms/tms/utils/whatsapp_bot/context.py
+import frappe
+from frappe.utils import now_datetime, add_to_date
+
+from tms.utils.bot_settings import get_settings, normalize_lang
+from tms.utils.whatsapp_utils import normalize_phone, get_or_create_contact
+from tms.utils.whatsapp_bot.helpers.messaging import send_reply
+
+
+def build_context(doc):
+    """
+    Returns a dict context used by router/handlers:
+    {
+      "doc", "settings", "lang", "contact",
+      "driver" (staff name/id),
+      "driver_name" (full_name for messages),
+      "trip"
+    }
+    """
+    settings, _ = get_settings()
+    if not int(settings.enabled or 0):
+        return None
+
+    # NOTE: you are sending EN+UR+AR in one message now,
+    # lang still kept for compatibility
+    lang = normalize_lang(getattr(settings, "default_language", "en"))
+
+    sender = normalize_phone(doc.get("from") or doc.get("from_") or "")
+    contact = get_or_create_contact(sender, doc.profile_name or "")
+    if not contact:
+        return None
+
+    # update conversation window (single UPDATE)
+    now = now_datetime()
+    hours = int(getattr(settings, "conversation_hours", 24) or 24)
+    expires = add_to_date(now, hours=hours)
+
+    updates = {
+        "last_inbound_at": now,
+        "conversation_expires_at": expires,
+    }
+    frappe.db.set_value(contact.doctype, contact.name, updates, update_modified=False)
+
+    # keep in-memory in sync
+    contact.last_inbound_at = now
+    contact.conversation_expires_at = expires
+
+    # driver validation + fetch full_name
+    staff_row = frappe.db.get_value(
+        "Staff",
+        {"mobile_no": ["like", f"%{sender[-9:]}"]},
+        ["name", "full_name"],
+        as_dict=True,
+    )
+    if not staff_row:
+        send_reply(doc, "not_registered_driver", lang)
+        return None
+
+    driver_id = staff_row.get("name")
+    driver_name = (staff_row.get("full_name") or staff_row.get("name") or "").strip() or "Driver"
+
+    trip = None
+    if getattr(contact, "current_trip", None) and frappe.db.exists("Trip", contact.current_trip):
+        trip = frappe.get_doc("Trip", contact.current_trip)
+
+    return {
+        "doc": doc,
+        "settings": settings,
+        "lang": lang,
+        "contact": contact,
+        "driver": driver_id,          # for Trip.driver
+        "driver_name": driver_name,   # for greeting/messages
+        "trip": trip,
+    }
+# apps/tms/tms/utils/whatsapp_bot/entry.py
+import frappe
+from tms.utils.whatsapp_bot.router import route_message
+from tms.utils.whatsapp_utils import normalize_phone
+
+
+def _cache_key(docname: str) -> str:
+    return f"wa_bot:processed:{docname}"
+
+
+def already_processed(doc) -> bool:
+    """Stops double-processing when hooks fire on_update / status updates / attach updates."""
+    try:
+        if not getattr(doc, "name", None):
+            return False
+        return bool(frappe.cache().get_value(_cache_key(doc.name)))
+    except Exception:
+        return False
+
+
+def mark_processed(doc):
+    """Mark processed for 48 hours."""
+    try:
+        if not getattr(doc, "name", None):
+            return
+        # Redis cache is shared across workers -> prevents duplicates across processes
+        frappe.cache().set_value(_cache_key(doc.name), 1, expires_in_sec=48 * 3600)
+    except Exception:
+        pass
+
+
+def already_replied(doc) -> bool:
+    mid = getattr(doc, "message_id", None)
+    if not mid:
+        return False
+    return bool(
+        frappe.db.exists(
+            "WhatsApp Message",
+            {"type": "Outgoing", "is_reply": 1, "reply_to_message_id": mid},
+        )
+    )
+
+
+def handle_incoming_whatsapp(doc, event=None):
+    if getattr(doc, "type", None) != "Incoming":
+        return
+
+    # Reload to ensure attach/message_id fields are populated
+    doc.reload()
+
+    # If already processed once, stop (prevents double triggers)
+    if already_processed(doc):
+        return
+
+    ctype = (doc.content_type or "").lower()
+
+    # For reliable dedup, wait until message_id exists
+    # (some integrations set message_id slightly later)
+    if not getattr(doc, "message_id", None):
+        return
+
+    # Media must have attach (webhook sometimes inserts message first, attach later)
+    if ctype in ("image", "document"):
+        if not (doc.attach or "").strip():
+            return
+
+    # Dedup: if we've already replied to this message id, skip AND mark processed
+    if already_replied(doc):
+        mark_processed(doc)
+        return
+
+    frappe.set_user("whatsapp.bot@example.com")
+
+    sender_raw = doc.get("from") or doc.get("from_") or ""
+    sender = normalize_phone(sender_raw) or sender_raw
+
+    # Per-sender lock to prevent concurrent processing
+    lock = frappe.cache().lock(f"wa_bot_lock:{sender}", timeout=30)
+    if not lock.acquire(blocking=False):
+        return
+
+    try:
+        route_message(doc)
+        # Mark processed ONLY after successful route_message
+        mark_processed(doc)
+    except Exception:
+        frappe.log_error("WA BOT FAIL", frappe.get_traceback())
+        raise
+    finally:
+        try:
+            lock.release()
+        except Exception:
+            pass
+# apps/tms/tms/utils/whatsapp_bot/entry.py
+import frappe
+from tms.utils.whatsapp_bot.router import route_message
+from tms.utils.whatsapp_utils import normalize_phone
+
+
+def already_replied(doc) -> bool:
+    mid = getattr(doc, "message_id", None)
+    if not mid:
+        return False
+    return bool(
+        frappe.db.exists(
+            "WhatsApp Message",
+            {"type": "Outgoing", "is_reply": 1, "reply_to_message_id": mid},
+        )
+    )
+
+
+def handle_incoming_whatsapp(doc, event=None):
+    if getattr(doc, "type", None) != "Incoming":
+        return
+
+    # Reload to ensure attach/message fields are populated
+    doc.reload()
+    ctype = (doc.content_type or "").lower()
+
+    # Media must have attach (webhook sometimes inserts message first, attach later)
+    if ctype in ("image", "document"):
+        if not (doc.attach or "").strip():
+            return
+
+    # Dedup: if we've already replied to this message id, skip
+    if already_replied(doc):
+        return
+
+    frappe.set_user("whatsapp.bot@example.com")
+
+    sender_raw = doc.get("from") or doc.get("from_") or ""
+    sender = normalize_phone(sender_raw) or sender_raw
+
+    # Per-sender lock to prevent concurrent processing (webhook retries / multiple workers)
+    lock = frappe.cache().lock(f"wa_bot_lock:{sender}", timeout=30)
+
+    if not lock.acquire(blocking=False):
+        return
+
+    try:
+        route_message(doc)
+    except Exception:
+        frappe.log_error("WA BOT FAIL", frappe.get_traceback())
+        raise
+    finally:
+        try:
+            lock.release()
+        except Exception:
+            pass
+
+    # IMPORTANT:
+    # Do NOT call route_message(doc) again here.
+    # Calling it twice is what causes duplicate questions/replies.
+# apps/tms/tms/utils/whatsapp_bot/context.py
+import frappe
+from frappe.utils import now_datetime, add_to_date
+
+from tms.utils.bot_settings import get_settings, normalize_lang
+from tms.utils.whatsapp_utils import normalize_phone, get_or_create_contact
+from tms.utils.whatsapp_bot.helpers.messaging import send_reply
+
+
+def build_context(doc):
+    """
+    Returns a dict context used by router/handlers:
+    {
+      "doc", "settings", "lang", "contact", "driver", "driver_full_name", "trip"
+    }
+    """
+    settings, _ = get_settings()
+    if not int(settings.enabled or 0):
+        return None
+
+    lang = normalize_lang(settings.default_language)
+
+    sender = normalize_phone(doc.get("from") or doc.get("from_") or "")
+    contact = get_or_create_contact(sender, doc.profile_name or "")
+    if not contact:
+        return None
+
+    # update conversation window (single UPDATE)
+    now = now_datetime()
+    hours = int(settings.conversation_hours or 24)
+    expires = add_to_date(now, hours=hours)
+
+    updates = {
+        "last_inbound_at": now,
+        "conversation_expires_at": expires,
+    }
+    frappe.db.set_value(contact.doctype, contact.name, updates, update_modified=False)
+
+    # keep in-memory contact in sync
+    contact.last_inbound_at = now
+    contact.conversation_expires_at = expires
+
+    # driver validation
+    driver = frappe.db.get_value(
+        "Staff",
+        {"mobile_no": ["like", f"%{sender[-9:]}"]},
+        "name",
+    )
+    if not driver:
+        send_reply(doc, "not_registered_driver", lang)
+        return None
+
+    # driver full name (fallback to doc.name)
+    driver_full_name = (
+        frappe.db.get_value("Staff", driver, "full_name")
+        or frappe.db.get_value("Staff", driver, "employee_name")
+        or driver
+    )
+
+    trip = None
+    if getattr(contact, "current_trip", None) and frappe.db.exists("Trip", contact.current_trip):
+        trip = frappe.get_doc("Trip", contact.current_trip)
+
+    return {
+        "doc": doc,
+        "settings": settings,
+        "lang": lang,
+        "contact": contact,
+        "driver": driver,
+        "driver_full_name": driver_full_name,
+        "trip": trip,
+    }
