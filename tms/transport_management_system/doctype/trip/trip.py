@@ -5,7 +5,7 @@ import os
 import json
 import frappe
 import uuid
-import qrcode
+import pyqrcode as qrcode
 import base64
 import re  
 from io import BytesIO
