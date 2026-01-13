@@ -53,7 +53,7 @@ $(document).on('app_ready', function () {
 
 									// send telegram msg
 									frappe.call({
-										method: "frappe_whatsapp.frappe_whatsapp.doctype.whatsapp_message.whatsapp_message.send_template",
+										method: "tms.transport_management_system.doctype.whatsapp_message.whatsapp_message.send_template",
 										args: {
 											to: values.mobile_no,
 											template: values.template,

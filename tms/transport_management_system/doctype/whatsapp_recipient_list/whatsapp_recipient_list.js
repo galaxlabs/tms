@@ -17,7 +17,7 @@ frappe.ui.form.on('WhatsApp Recipient List', {
             }
             
             frappe.call({
-                method: 'frappe_whatsapp.utils.bulk_messaging.import_recipients',
+                method: 'tms.utils.bulk_messaging.import_recipients',
                 args: {
                     list_name: frm.doc.name,
                     doctype: frm.doc.doctype_to_import,

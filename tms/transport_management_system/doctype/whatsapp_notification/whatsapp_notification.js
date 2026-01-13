@@ -57,7 +57,7 @@ frappe.notification = {
 		// body...
 		frm.add_custom_button(__('Get Alerts for Today'), function () {
             frappe.call({
-                method: 'frappe_whatsapp.frappe_whatsapp.doctype.whatsapp_notification.whatsapp_notification.call_trigger_notifications',
+                method: 'tms.transport_management_system.doctype.whatsapp_notification.whatsapp_notification.call_trigger_notifications',
                 args: {
                     method: 'daily' 
                 },
