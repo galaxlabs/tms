@@ -1,13 +1,19 @@
 __version__ = "0.0.1"
 
-try:
+def override_frappe_get_pdf():
     import frappe
     import frappe.utils.pdf as frappe_pdf
-    from tms.utils.chrome_pdf import get_pdf as chrome_get_pdf
 
-    frappe_pdf.get_pdf = chrome_get_pdf
-    frappe.logger().info("tms: Overridden frappe.utils.pdf.get_pdf with Chrome-based generator")
-except Exception:
-    # Do not crash app if something goes wrong
-    import frappe
-    frappe.log_error(frappe.get_traceback(), "tms: Failed to override frappe.utils.pdf.get_pdf")
+    # Avoid running during install/build where site/db may not be ready
+    if not getattr(frappe.local, "site", None):
+        return
+    if getattr(frappe.flags, "in_install", False) or getattr(frappe.flags, "in_migrate", False):
+        return
+
+    try:
+        from tms.utils.chrome_pdf import get_pdf as chrome_get_pdf
+        frappe_pdf.get_pdf = chrome_get_pdf
+        frappe.logger().info("tms: Overridden frappe.utils.pdf.get_pdf with Chrome-based generator")
+    except Exception:
+        # IMPORTANT: do NOT write to DB here
+        frappe.logger().exception("tms: Failed to override frappe.utils.pdf.get_pdf")

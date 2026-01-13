@@ -1,9 +1,5 @@
-import json
+import pyqrcode
 import frappe
-import uuid
-import qrcode
-import base64
-from io import BytesIO
 import io
 import os
 import re

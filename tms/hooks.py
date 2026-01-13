@@ -240,6 +240,9 @@ app_license = "mit"
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
+after_migrate = "tms.override_frappe_get_pdf"
+boot_session = "tms.override_frappe_get_pdf"
+
 scheduler_events = {
     # -------------------------
     # CRON (specific times)
@@ -249,9 +252,9 @@ scheduler_events = {
         "0 6 1 * *": [
             "tms.hotels.api.rental.auto_generate_rent_invoices",
         ],
-        "*/5 * * * *": [
-            "tms.utils.trip_lifecycle.auto_mark_trips_arrived"
-        ]
+        # "*/5 * * * *": [
+        #     "tms.utils.trip_lifecycle.auto_mark_trips_arrived"
+        # ]
     },
 
     # -------------------------
@@ -329,6 +332,6 @@ doc_events = {
     },
     "Dunning": {
         "on_submit": "tms.utils.pdf_hooks.create_pdf_on_submit"
-}
-
+        }
+        
 }
