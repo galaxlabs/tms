@@ -15,7 +15,7 @@ dependencies = [
     "google-genai",
     "qrcode",
     "PyQRCode~=1.2.1",
-    "pydyf==0.10.0",
+    "pypdf==0.10.0",
 ]
 
 [build-system]
