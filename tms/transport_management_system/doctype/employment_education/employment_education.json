@@ -24,39 +24,39 @@
   {
    "fieldname": "city_country",
    "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "City / Country"
+   "label": "City / Country",
+   "in_list_view": 1
   },
   {
    "fieldname": "from_date",
    "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "From"
+   "label": "From",
+   "in_list_view": 1
   },
   {
    "fieldname": "to_date",
    "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "To"
+   "label": "To",
+   "in_list_view": 1
   },
   {
    "fieldname": "specialize",
    "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Specialize"
+   "label": "Specialize",
+   "in_list_view": 1
   },
   {
    "fieldname": "grade",
    "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Grade"
+   "label": "Grade",
+   "in_list_view": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-01 18:48:44.385247",
+ "modified": "2026-02-01 18:02:48.109555",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "Employment Education",
