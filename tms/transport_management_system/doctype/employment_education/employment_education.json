@@ -1,0 +1,70 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-01 17:47:41.812236",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "school_university",
+  "city_country",
+  "from_date",
+  "to_date",
+  "specialize",
+  "grade"
+ ],
+ "fields": [
+  {
+   "fieldname": "school_university",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "School / University",
+   "reqd": 1
+  },
+  {
+   "fieldname": "city_country",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "City / Country"
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "From"
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "To"
+  },
+  {
+   "fieldname": "specialize",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Specialize"
+  },
+  {
+   "fieldname": "grade",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Grade"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-01 18:48:44.385247",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "Employment Education",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

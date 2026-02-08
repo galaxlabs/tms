@@ -102,15 +102,23 @@ class Trip(WebsiteGenerator):
         return 0
 
         # Build public URL from site config (respects https and domain)
- 
     def generate_qr_code(self, data: str) -> str:
-        qr = qrcode.QRCode(version=1, box_size=10, border=2)
-        qr.add_data(data)
-        qr.make(fit=True)
-        img = qr.make_image()
-        buf = BytesIO()
-        img.save(buf, format="PNG")
-        return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+        """
+        Generate QR code as PNG base64 (data URI) using PyQRCode.
+        No PIL needed.
+        """
+        qr = qrcode.create(data)  # pyqrcode
+        png_bytes = qr.png_as_base64_str(scale=6)  # scale controls size
+        return "data:image/png;base64," + png_bytes
+
+    # def generate_qr_code(self, data: str) -> str:
+    #     qr = qrcode.QRCode(version=1, box_size=10, border=2)
+    #     qr.add_data(data)
+    #     qr.make(fit=True)
+    #     img = qr.make_image()
+    #     buf = BytesIO()
+    #     img.save(buf, format="PNG")
+    #     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
 
     # OCR METHODS - Clean Integration
     def init_ocr_manager(self):
@@ -302,40 +310,3 @@ def create_connected_trip(source_trip, route_name, connection_type=None):
 
     new_trip.insert(ignore_permissions=True)
     return new_trip.name
-
-@frappe.whitelist()
-def add_passenger_from_ocr(self, file_url):
-    """Add single passenger from OCR scan"""
-    try:
-        ocr_manager = self.init_ocr_manager()
-        result = ocr_manager.extract_from_image(file_url)
-        data = result["structured_data"]
-        
-        if data.get("name"):
-            self.append("passengers", {
-                "passenger_name": data.get("name"),
-                "idpassport_no": data.get("id_no", ""),
-                "nationality": data.get("nationality", ""),
-                "ocr_confidence": data.get("confidence", 0)
-            })
-            
-            self.save(ignore_permissions=True)
-            frappe.db.commit()
-            
-            return {
-                "success": True,
-                "passenger_added": data.get("name"),
-                "confidence": data.get("confidence", 0)
-            }
-        else:
-            return {
-                "success": False,
-                "message": "Could not extract passenger name from image"
-            }
-            
-    except Exception as e:
-        frappe.log_error(f"Single OCR extraction failed: {e}")
-        return {
-            "success": False,
-            "error": str(e)
-        }

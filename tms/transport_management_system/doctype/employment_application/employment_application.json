@@ -1,0 +1,456 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{full_name}-{MM}-{DD}-{#####}",
+ "creation": "2026-02-01 17:21:51.972801",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_application",
+  "position_applied_for",
+  "favorite_city_1",
+  "favorite_city_2",
+  "photo",
+  "section_personal",
+  "first_name",
+  "father_name",
+  "grand_father_name",
+  "family_name",
+  "company",
+  "column_personal_1",
+  "full_name",
+  "gender",
+  "date_of_birth",
+  "place_of_birth",
+  "nationality",
+  "religion",
+  "section_identity",
+  "id_iqama_no",
+  "passport_no",
+  "mobile",
+  "email",
+  "column_identity_1",
+  "national_address",
+  "iban",
+  "section_social",
+  "marital_status",
+  "has_dependents",
+  "dependents",
+  "section_employment",
+  "previous_jobs",
+  "section_education",
+  "education",
+  "section_training",
+  "training_courses",
+  "section_languages",
+  "languages",
+  "section_misc",
+  "how_did_you_know",
+  "relatives_in_company",
+  "section_emergency",
+  "emergency_name",
+  "emergency_relation",
+  "emergency_mobile",
+  "emergency_address",
+  "section_references",
+  "references",
+  "section_lic_health",
+  "driving_licence",
+  "driving_category",
+  "blood_group",
+  "column_health_1",
+  "health_status",
+  "serious_illness",
+  "illness_details",
+  "convicted",
+  "convicted_details",
+  "other_info",
+  "section_declaration",
+  "applicant_signature_name",
+  "applicant_signature_date",
+  "section_hr",
+  "hr_status",
+  "hr_notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_application",
+   "fieldtype": "Section Break",
+   "label": "Application"
+  },
+  {
+   "fieldname": "position_applied_for",
+   "fieldtype": "Data",
+   "label": "Position Applied For"
+  },
+  {
+   "fieldname": "favorite_city_1",
+   "fieldtype": "Data",
+   "label": "Favorite City 1"
+  },
+  {
+   "fieldname": "favorite_city_2",
+   "fieldtype": "Data",
+   "label": "Favorite City 2"
+  },
+  {
+   "fieldname": "photo",
+   "fieldtype": "Attach Image",
+   "label": "Photo"
+  },
+  {
+   "fieldname": "section_personal",
+   "fieldtype": "Section Break",
+   "label": "Personal Information"
+  },
+  {
+   "fieldname": "first_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "First Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "father_name",
+   "fieldtype": "Data",
+   "label": "Father Name"
+  },
+  {
+   "fieldname": "grand_father_name",
+   "fieldtype": "Data",
+   "label": "Grand Father Name"
+  },
+  {
+   "fieldname": "family_name",
+   "fieldtype": "Data",
+   "label": "Family Name"
+  },
+  {
+   "fieldname": "column_personal_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "full_name",
+   "fieldtype": "Data",
+   "label": "Full Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "gender",
+   "fieldtype": "Select",
+   "label": "Gender",
+   "options": "\nMale\nFemale"
+  },
+  {
+   "fieldname": "date_of_birth",
+   "fieldtype": "Date",
+   "label": "Date of Birth"
+  },
+  {
+   "fieldname": "place_of_birth",
+   "fieldtype": "Data",
+   "label": "Place of Birth"
+  },
+  {
+   "fieldname": "nationality",
+   "fieldtype": "Data",
+   "label": "Nationality"
+  },
+  {
+   "fieldname": "religion",
+   "fieldtype": "Data",
+   "label": "Religion"
+  },
+  {
+   "fieldname": "section_identity",
+   "fieldtype": "Section Break",
+   "label": "Identity & Contact"
+  },
+  {
+   "fieldname": "id_iqama_no",
+   "fieldtype": "Data",
+   "label": "ID / Iqama No"
+  },
+  {
+   "fieldname": "passport_no",
+   "fieldtype": "Data",
+   "label": "Passport No"
+  },
+  {
+   "fieldname": "mobile",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Mobile",
+   "reqd": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email"
+  },
+  {
+   "fieldname": "column_identity_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "national_address",
+   "fieldtype": "Small Text",
+   "label": "National Address"
+  },
+  {
+   "fieldname": "iban",
+   "fieldtype": "Data",
+   "label": "IBAN"
+  },
+  {
+   "fieldname": "section_social",
+   "fieldtype": "Section Break",
+   "label": "Marital / Dependents"
+  },
+  {
+   "fieldname": "marital_status",
+   "fieldtype": "Select",
+   "label": "Marital Status",
+   "options": "\nSingle\nMarried"
+  },
+  {
+   "default": "0",
+   "fieldname": "has_dependents",
+   "fieldtype": "Check",
+   "label": "Have Dependents?"
+  },
+  {
+   "depends_on": "eval:doc.has_dependents==1",
+   "fieldname": "dependents",
+   "fieldtype": "Table",
+   "label": "Dependents",
+   "options": "Employment Dependent"
+  },
+  {
+   "fieldname": "section_employment",
+   "fieldtype": "Section Break",
+   "label": "Previous Employment"
+  },
+  {
+   "fieldname": "previous_jobs",
+   "fieldtype": "Table",
+   "label": "Previous Jobs",
+   "options": "Employment Previous Job"
+  },
+  {
+   "fieldname": "section_education",
+   "fieldtype": "Section Break",
+   "label": "Education"
+  },
+  {
+   "fieldname": "education",
+   "fieldtype": "Table",
+   "label": "Education",
+   "options": "Employment Education"
+  },
+  {
+   "fieldname": "section_training",
+   "fieldtype": "Section Break",
+   "label": "Training Courses"
+  },
+  {
+   "fieldname": "training_courses",
+   "fieldtype": "Table",
+   "label": "Training Courses",
+   "options": "Employment Training"
+  },
+  {
+   "fieldname": "section_languages",
+   "fieldtype": "Section Break",
+   "label": "Languages"
+  },
+  {
+   "fieldname": "languages",
+   "fieldtype": "Table",
+   "label": "Languages",
+   "options": "Employment Language"
+  },
+  {
+   "fieldname": "section_misc",
+   "fieldtype": "Section Break",
+   "label": "Other Information"
+  },
+  {
+   "fieldname": "how_did_you_know",
+   "fieldtype": "Small Text",
+   "label": "How did you know about the job?"
+  },
+  {
+   "fieldname": "relatives_in_company",
+   "fieldtype": "Small Text",
+   "label": "Relatives in Company (Specify)"
+  },
+  {
+   "fieldname": "section_emergency",
+   "fieldtype": "Section Break",
+   "label": "Emergency Contact"
+  },
+  {
+   "fieldname": "emergency_name",
+   "fieldtype": "Data",
+   "label": "Name"
+  },
+  {
+   "fieldname": "emergency_relation",
+   "fieldtype": "Data",
+   "label": "Relationship"
+  },
+  {
+   "fieldname": "emergency_mobile",
+   "fieldtype": "Data",
+   "label": "Mobile"
+  },
+  {
+   "fieldname": "emergency_address",
+   "fieldtype": "Small Text",
+   "label": "Address"
+  },
+  {
+   "fieldname": "section_references",
+   "fieldtype": "Section Break",
+   "label": "References (Not Relatives)"
+  },
+  {
+   "fieldname": "references",
+   "fieldtype": "Table",
+   "label": "References",
+   "options": "Employment Reference"
+  },
+  {
+   "fieldname": "section_lic_health",
+   "fieldtype": "Section Break",
+   "label": "Licenses / Health / Legal"
+  },
+  {
+   "default": "0",
+   "fieldname": "driving_licence",
+   "fieldtype": "Check",
+   "label": "Do you have driving licence?"
+  },
+  {
+   "depends_on": "eval:doc.driving_licence==1",
+   "fieldname": "driving_category",
+   "fieldtype": "Data",
+   "label": "Driving Licence Category"
+  },
+  {
+   "fieldname": "blood_group",
+   "fieldtype": "Select",
+   "label": "Blood Group",
+   "options": "\nA+\nA-\nB+\nB-\nAB+\nAB-\nO+\nO-"
+  },
+  {
+   "fieldname": "column_health_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "health_status",
+   "fieldtype": "Select",
+   "label": "Health Status",
+   "options": "\nExcellent\nGood\nFair\nPoor"
+  },
+  {
+   "default": "0",
+   "fieldname": "serious_illness",
+   "fieldtype": "Check",
+   "label": "Any Serious Illness?"
+  },
+  {
+   "depends_on": "eval:doc.serious_illness==1",
+   "fieldname": "illness_details",
+   "fieldtype": "Small Text",
+   "label": "Illness Details"
+  },
+  {
+   "default": "0",
+   "fieldname": "convicted",
+   "fieldtype": "Check",
+   "label": "Have you ever been convicted?"
+  },
+  {
+   "depends_on": "eval:doc.convicted==1",
+   "fieldname": "convicted_details",
+   "fieldtype": "Small Text",
+   "label": "Conviction Details"
+  },
+  {
+   "fieldname": "other_info",
+   "fieldtype": "Small Text",
+   "label": "Other Information"
+  },
+  {
+   "fieldname": "section_declaration",
+   "fieldtype": "Section Break",
+   "label": "Declaration"
+  },
+  {
+   "fieldname": "applicant_signature_name",
+   "fieldtype": "Data",
+   "label": "Name (Signature)"
+  },
+  {
+   "fieldname": "applicant_signature_date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "section_hr",
+   "fieldtype": "Section Break",
+   "label": "For HR Use"
+  },
+  {
+   "default": "New",
+   "fieldname": "hr_status",
+   "fieldtype": "Select",
+   "label": "HR Status",
+   "options": "\nNew\nUnder Review\nShortlisted\nRejected\nApproved"
+  },
+  {
+   "fieldname": "hr_notes",
+   "fieldtype": "Small Text",
+   "label": "HR Notes"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-01 23:13:16.317675",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "Employment Application",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1,
+ "track_views": 1
+}

@@ -1,6 +1,7 @@
+# /home/dg/dg-b/apps/tms/tms/__init__.py
 __version__ = "0.0.1"
 
-def override_frappe_get_pdf():
+def override_frappe_get_pdf(bootinfo=None):
     import frappe
     import frappe.utils.pdf as frappe_pdf
 
