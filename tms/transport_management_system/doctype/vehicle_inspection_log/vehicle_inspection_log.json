@@ -16,6 +16,7 @@
   "column_break_h2",
   "vehicle",
   "vehicle_type",
+  "supervisor",
   "sec_items",
   "items",
   "auto_fill_checklist",
@@ -27,6 +28,7 @@
   "column_break_s2",
   "supervisor_name_text",
   "supervisor_signature",
+  "company_stamp",
   "sec_notes",
   "overall_notes"
  ],
@@ -116,28 +118,34 @@
    "fieldtype": "Column Break"
   },
   {
+   "fetch_from": "driver.full_name",
    "fieldname": "driver_name_text",
    "fieldtype": "Data",
    "label": "Driver Name (Text) | \u0627\u0633\u0645 \u0627\u0644\u0633\u0627\u0626\u0642 (\u0646\u0635)"
   },
   {
+   "fetch_from": "driver.signature_image",
    "fieldname": "driver_signature",
    "fieldtype": "Signature",
-   "label": "Driver Signature | \u062a\u0648\u0642\u064a\u0639 \u0627\u0644\u0633\u0627\u0626\u0642"
+   "label": "Driver Signature | \u062a\u0648\u0642\u064a\u0639 \u0627\u0644\u0633\u0627\u0626\u0642",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_s2",
    "fieldtype": "Column Break"
   },
   {
+   "fetch_from": "driver.supervisor_name",
    "fieldname": "supervisor_name_text",
    "fieldtype": "Data",
    "label": "Supervisor (Text) | \u0627\u0644\u0645\u0634\u0631\u0641 (\u0646\u0635)"
   },
   {
+   "fetch_from": "driver.supervisor_signature",
    "fieldname": "supervisor_signature",
    "fieldtype": "Signature",
-   "label": "Supervisor Signature | \u062a\u0648\u0642\u064a\u0639 \u0627\u0644\u0645\u0634\u0631\u0641"
+   "label": "Supervisor Signature | \u062a\u0648\u0642\u064a\u0639 \u0627\u0644\u0645\u0634\u0631\u0641",
+   "read_only": 1
   },
   {
    "fieldname": "sec_notes",
@@ -154,12 +162,26 @@
    "fieldname": "auto_fill_checklist",
    "fieldtype": "Check",
    "label": "Auto Fill Checklist"
+  },
+  {
+   "fieldname": "supervisor",
+   "fieldtype": "Link",
+   "label": "Supervisor",
+   "options": "Staff",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "driver.company_stamp",
+   "fieldname": "company_stamp",
+   "fieldtype": "Attach Image",
+   "label": "Company Stamp",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-25 16:47:14.408856",
+ "modified": "2026-02-26 01:00:36.100499",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "Vehicle Inspection Log",
@@ -175,6 +197,42 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Driver",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Desk User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Employee",
    "share": 1,
    "write": 1
   }

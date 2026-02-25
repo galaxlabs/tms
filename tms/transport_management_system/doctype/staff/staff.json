@@ -24,6 +24,8 @@
   "last_name",
   "date_of_birth",
   "date_of_joining",
+  "signature_image",
+  "supervisor_signature",
   "column_break_sfqy",
   "full_name",
   "time_zone",
@@ -31,6 +33,7 @@
   "department",
   "documents_status",
   "documents_status_html",
+  "supervisor_name",
   "column_break_gbma",
   "nationality",
   "company_name",
@@ -38,6 +41,7 @@
   "gender",
   "employee",
   "branch",
+  "company_stamp",
   "section_break_iowy",
   "documents",
   "roles_permissions_tab",
@@ -117,6 +121,7 @@
   {
    "fieldname": "mobile_no",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Mobile No"
   },
   {
@@ -147,6 +152,7 @@
   {
    "fieldname": "full_name",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Full Name",
    "unique": 1
   },
@@ -304,6 +310,27 @@
    "fieldtype": "HTML",
    "label": "Documents Status",
    "read_only": 1
+  },
+  {
+   "fieldname": "signature_image",
+   "fieldtype": "Attach Image",
+   "label": "Signature"
+  },
+  {
+   "fieldname": "supervisor_signature",
+   "fieldtype": "Attach Image",
+   "label": "Supervisor Signature"
+  },
+  {
+   "fieldname": "supervisor_name",
+   "fieldtype": "Data",
+   "label": "Supervisor Name"
+  },
+  {
+   "fetch_from": "company_name.company_stamp_image",
+   "fieldname": "company_stamp",
+   "fieldtype": "Attach Image",
+   "label": "Company Stamp"
   }
  ],
  "grid_page_length": 50,
@@ -318,7 +345,7 @@
    "link_fieldname": "driver"
   }
  ],
- "modified": "2026-02-10 18:58:46.295136",
+ "modified": "2026-02-26 00:42:40.018747",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "Staff",

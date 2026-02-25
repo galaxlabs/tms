@@ -226,7 +226,17 @@ app_license = "mit"
 # 		"doctype": "{doctype_4}"
 # 	}
 # ]
+fixtures = [
+    # If you created standard (non-custom) doctypes inside your app module,
+    # their DocType records are already inside the app, not needed as fixtures.
 
+    # Export only records that belong to your app/module
+    {"dt": "Custom Field", "filters": [["module", "=", "Transport Management System"]]},
+    {"dt": "Property Setter", "filters": [["module", "=", "Transport Management System"]]},
+    {"dt": "Client Script", "filters": [["module", "=", "Transport Management System"]]},
+    {"dt": "Server Script", "filters": [["module", "=", "Transport Management System"]]},
+    # Print Formats / Reports / Workflows that belong to your module
+]
 # Authentication and authorization
 # --------------------------------
 
