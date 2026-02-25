@@ -1,0 +1,72 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:item",
+ "creation": "2026-02-25 12:58:27.192629",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "category",
+  "sort_order",
+  "column_break_mrux",
+  "is_active",
+  "item"
+ ],
+ "fields": [
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "label": "Category",
+   "options": "Dashboard Indicators | \u0645\u0624\u0634\u0631\u0627\u062a \u0644\u0648\u062d\u0629 \u0627\u0644\u0642\u064a\u0627\u062f\u0629\nExternal Inspection | \u0641\u062d\u0635 \u0627\u0644\u0623\u062c\u0632\u0627\u0621 \u0627\u0644\u062e\u0627\u0631\u062c\u064a\u0629\nSafety & Security Tools | \u0623\u062f\u0648\u0627\u062a \u0648\u0645\u062a\u0637\u0644\u0628\u0627\u062a \u0627\u0644\u0633\u0644\u0627\u0645\u0629"
+  },
+  {
+   "fieldname": "sort_order",
+   "fieldtype": "Int",
+   "label": "Sort Order"
+  },
+  {
+   "fieldname": "column_break_mrux",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Active"
+  },
+  {
+   "fieldname": "item",
+   "fieldtype": "Data",
+   "label": "Item Name",
+   "unique": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-25 13:08:56.783274",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "Vehicle Inspection Checklist Item",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

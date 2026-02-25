@@ -258,11 +258,11 @@
  "has_web_view": 1,
  "image_field": "qr_code",
  "links": [],
- "modified": "2026-01-10 14:05:06.309253",
+ "modified": "2026-02-10 19:01:28.368717",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "Trip",
- "naming_rule": "Expression",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
