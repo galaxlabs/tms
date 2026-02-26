@@ -135,7 +135,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "driver.supervisor_name",
    "fieldname": "supervisor_name_text",
    "fieldtype": "Data",
    "label": "Supervisor (Text) | \u0627\u0644\u0645\u0634\u0631\u0641 (\u0646\u0635)"
@@ -144,8 +143,7 @@
    "fetch_from": "driver.supervisor_signature",
    "fieldname": "supervisor_signature",
    "fieldtype": "Signature",
-   "label": "Supervisor Signature | \u062a\u0648\u0642\u064a\u0639 \u0627\u0644\u0645\u0634\u0631\u0641",
-   "read_only": 1
+   "label": "Supervisor Signature | \u062a\u0648\u0642\u064a\u0639 \u0627\u0644\u0645\u0634\u0631\u0641"
   },
   {
    "fieldname": "sec_notes",
@@ -181,7 +179,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-26 01:00:36.100499",
+ "modified": "2026-02-26 16:54:44.057210",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "Vehicle Inspection Log",
