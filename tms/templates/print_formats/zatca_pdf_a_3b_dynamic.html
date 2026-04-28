@@ -1,0 +1,709 @@
+{% set company = frappe.get_doc("Company", doc.company) %}
+{% set customer_doc = frappe.get_doc("Customer", doc.customer) %}
+{% set company_ar = company.get("company_name_arabic") or company.get("custom_company_name_arabic") or company.company_name %}
+{% set customer_ar = customer_doc.get("customer_name_in_arabic") or doc.get("customer_name_in_arabic") or doc.customer_name %}
+{% set brand = company.custom_invoice_brand_color or "#0f766e" %}
+{% set variant = company.custom_invoice_style_variant or "Classic" %}
+{% set company_addr = frappe.get_doc("Address", doc.company_address) if doc.company_address else None %}
+{% set customer_addr = frappe.get_doc("Address", doc.customer_address) if doc.customer_address else None %}
+{% set first_item = doc.items[0] if doc.items else None %}
+{% set sales_order = frappe.get_doc("Sales Order", first_item.sales_order) if first_item and first_item.get("sales_order") else None %}
+{% set delivery_note_name = first_item.delivery_note if first_item and first_item.get("delivery_note") else None %}
+{% set dn_item = frappe.get_doc("Delivery Note Item", first_item.dn_detail) if first_item and first_item.get("dn_detail") else None %}
+{% set delivery_date = frappe.db.get_value("Delivery Note", delivery_note_name, "posting_date") if delivery_note_name else None %}
+{% set bank_accounts = frappe.get_all("Bank Account", filters={"company": doc.company}, fields=["bank", "iban", "account_name", "bank_account_no"], limit=1) %}
+{% set bank_account = bank_accounts[0] if bank_accounts else None %}
+{% set bank_swift = frappe.db.get_value("Bank", bank_account.bank, "swift_number") if bank_account and bank_account.bank else "-" %}
+{% set bank_name_ar = frappe.db.get_value("Bank", bank_account.bank, "custom_bank_name_in_arabic") if bank_account and bank_account.bank and frappe.get_meta("Bank").has_field("custom_bank_name_in_arabic") else "-" %}
+<style>
+@page { size: A4; margin: 8mm; }
+:root {
+  --brand: {{ brand }};
+  --soft: color-mix(in srgb, {{ brand }} 14%, white);
+  --soft-2: color-mix(in srgb, {{ brand }} 6%, white);
+  --ink: #12212b;
+  --muted: #58707d;
+  --line: #d5dde2;
+  --card: #ffffff;
+}
+body {
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  font-size: 9.4px;
+  color: var(--ink);
+}
+.print-format {
+  border-radius: 0 !important;
+  padding: 5mm !important;
+}
+* { box-sizing: border-box; }
+.invoice-shell { position: relative; }
+.sheet {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: #ffffff;
+}
+.hero {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 0 0 8px;
+  background: #ffffff;
+}
+.hero-grid {
+  width: 100%;
+  border-collapse: collapse;
+}
+.hero-grid td {
+  vertical-align: top;
+}
+.hero-title {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: 0;
+  margin: 0;
+}
+.hero-subtitle {
+  font-size: 10.5px;
+  color: var(--muted);
+  margin: 3px 0 5px;
+}
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: white;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.company-names {
+  margin-top: 5px;
+}
+.company-ar {
+  direction: rtl;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 2px;
+}
+.hero-meta-wrap {
+  margin-top: 6px;
+}
+.hero-meta {
+  display: inline-block;
+  min-width: 118px;
+  margin: 0 8px 4px 0;
+}
+.hero-label {
+  color: var(--muted);
+  font-size: 8px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.hero-value {
+  font-size: 10.2px;
+  font-weight: 500;
+  margin-top: 1px;
+}
+.qr-panel {
+  width: 118px;
+  margin-left: auto;
+  border: 0;
+  border-radius: 0;
+  background: white;
+  padding: 0;
+  text-align: center;
+}
+.qr-panel img {
+  width: 96px;
+  height: 96px;
+}
+.qr-caption {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 7.4px;
+  line-height: 1.2;
+}
+.summary-grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 6px;
+}
+.summary-card {
+  width: 49%;
+  vertical-align: top;
+  background: var(--card);
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  padding: 6px 0 0;
+}
+.summary-spacer {
+  width: 2%;
+}
+.section-kicker {
+  color: var(--brand);
+  font-weight: 600;
+  font-size: 8.6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.mini-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.mini-table td {
+  padding: 3px 0 !important;
+  border-bottom: 1px dashed var(--line);
+  vertical-align: top !important;
+  line-height: 1.25;
+}
+.mini-table tr:last-child td {
+  border-bottom: 0;
+}
+.mini-label {
+  width: 33%;
+  color: var(--muted);
+  font-weight: 400;
+}
+.mini-value {
+  width: 34%;
+  font-weight: 500;
+}
+.mini-ar {
+  width: 33%;
+  text-align: right;
+  direction: rtl;
+  color: var(--muted);
+}
+.party-grid {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-top: 6px;
+}
+.party-grid > tbody > tr > td {
+  border: 0 !important;
+  padding: 0 !important;
+  vertical-align: top !important;
+}
+.party-column {
+  width: 49%;
+}
+.party-gap {
+  width: 2%;
+}
+.party-card {
+  width: 100%;
+  min-height: 222px;
+  background: var(--card);
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  padding: 6px 0 0;
+  page-break-inside: avoid;
+}
+.party-title {
+  display: table;
+  width: 100%;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 5px;
+}
+.party-title strong {
+  display: table-cell;
+  color: var(--brand);
+  font-size: 9.5px;
+  font-weight: 600;
+}
+.party-title span {
+  display: table-cell;
+  direction: rtl;
+  text-align: right;
+  color: var(--muted);
+  font-size: 9px;
+}
+.party-name {
+  display: none;
+}
+.party-name-ar {
+  display: none;
+}
+.party-rows {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.party-rows td {
+  padding: 2.8px 0 !important;
+  border-bottom: 1px dashed var(--line) !important;
+  vertical-align: top !important;
+  line-height: 1.25;
+}
+.party-rows tr:last-child td {
+  border-bottom: 0 !important;
+}
+.party-rows td:first-child {
+  width: 28%;
+  color: var(--muted);
+  font-weight: 400;
+}
+.party-rows td:nth-child(2) {
+  width: 46%;
+  font-weight: 500;
+  padding-right: 8px !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.party-rows td:last-child {
+  width: 26%;
+  direction: rtl;
+  text-align: right;
+  color: var(--muted);
+}
+.block {
+  margin-top: 7px;
+  background: var(--card);
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  padding: 6px 0 0;
+}
+.block-head {
+  display: table;
+  width: 100%;
+  margin-bottom: 5px;
+}
+.block-head strong {
+  display: table-cell;
+  color: var(--brand);
+  font-size: 9.5px;
+  font-weight: 600;
+}
+.block-head span {
+  display: table-cell;
+  direction: rtl;
+  text-align: right;
+  color: var(--muted);
+  font-size: 9px;
+}
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.items-table th,
+.items-table td {
+  border: 1px solid var(--line);
+  padding: 4px 5px !important;
+  vertical-align: top !important;
+  line-height: 1.25;
+}
+.items-table thead th {
+  background: var(--soft);
+  color: var(--brand);
+  font-size: 8px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.items-table .num {
+  text-align: right;
+  direction: ltr;
+  white-space: nowrap;
+}
+.item-name {
+  font-weight: 500;
+}
+.item-code {
+  color: var(--muted);
+  margin-top: 1px;
+  font-size: 8.4px;
+}
+.totals-grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 6px;
+}
+.tax-card,
+.totals-card {
+  width: 49%;
+  vertical-align: top;
+  background: var(--card);
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  padding: 6px 0 0;
+}
+.totals-table,
+.tax-table,
+.bank-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.totals-table td,
+.tax-table td,
+.tax-table th,
+.bank-table td {
+  border: 1px solid var(--line);
+  padding: 4px 5px !important;
+  line-height: 1.25;
+}
+.totals-table td:first-child {
+  color: var(--muted);
+  font-weight: 400;
+}
+.totals-table td:last-child,
+.tax-table td:last-child,
+.tax-table td.num,
+.bank-table td:last-child {
+  text-align: right;
+  direction: ltr;
+}
+.totals-table tr:last-child td {
+  background: var(--brand);
+  color: white;
+  font-weight: 600;
+}
+.tax-table th {
+  background: var(--soft-2);
+  color: var(--brand);
+  text-align: left;
+  font-size: 8px;
+  font-weight: 500;
+}
+.tax-table .num {
+  text-align: right;
+  direction: ltr;
+}
+.bank-table td:first-child {
+  width: 18%;
+  color: var(--muted);
+  font-weight: 400;
+}
+.bank-table td:nth-child(2) {
+  width: 32%;
+  font-weight: 500;
+}
+.bank-table td:nth-child(3) {
+  width: 18%;
+  color: var(--muted);
+  text-align: right;
+  direction: rtl;
+  font-weight: 400;
+}
+.bank-table td:last-child {
+  width: 32%;
+  direction: rtl;
+  text-align: right;
+}
+.footnote {
+  margin-top: 7px;
+  border: 1px dashed var(--line);
+  border-radius: 0;
+  padding: 5px 0;
+  color: var(--muted);
+  line-height: 1.3;
+}
+.modern .hero {
+  background: linear-gradient(135deg, var(--brand), #0b1720 68%);
+  border-color: transparent;
+  color: white;
+}
+.modern .hero-subtitle,
+.modern .hero-label,
+.modern .qr-caption,
+.modern .company-ar {
+  color: rgba(255,255,255,0.82);
+}
+.modern .badge {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.16);
+}
+.modern .summary-card,
+.modern .party-card,
+.modern .tax-card,
+.modern .totals-card,
+.modern .block {
+  background: #fbfdfe;
+}
+.minimal .sheet,
+.minimal .hero,
+.minimal .summary-card,
+.minimal .party-card,
+.minimal .tax-card,
+.minimal .totals-card,
+.minimal .block,
+.minimal .footnote,
+.minimal .qr-panel {
+  border-radius: 0;
+}
+.minimal .badge,
+.minimal .totals-table tr:last-child td {
+  background: #161616;
+}
+</style>
+
+<div class="invoice-shell {% if variant == 'Modern' %}modern{% elif variant == 'Minimal' %}minimal{% endif %}">
+  <div class="sheet">
+    <div class="hero">
+      <table class="hero-grid">
+        <tr>
+          <td>
+            <div class="badge">ZATCA PDF/A-3B</div>
+            <div class="company-names">
+              <div class="hero-title">{{ company.company_name }}</div>
+              <div class="company-ar">{{ company_ar }}</div>
+              <div class="hero-subtitle">Tax Invoice / فاتورة ضريبية</div>
+            </div>
+            <div class="hero-meta-wrap">
+              <div class="hero-meta">
+                <div class="hero-label">Invoice No</div>
+                <div class="hero-value">{{ doc.name }}</div>
+              </div>
+              <div class="hero-meta">
+                <div class="hero-label">Posting Date</div>
+                <div class="hero-value">{{ doc.posting_date }} {{ doc.posting_time or "" }}</div>
+              </div>
+              <div class="hero-meta">
+                <div class="hero-label">Due Date</div>
+                <div class="hero-value">{{ doc.due_date or "-" }}</div>
+              </div>
+              <div class="hero-meta">
+                <div class="hero-label">Status</div>
+                <div class="hero-value">{{ doc.get("custom_zatca_submit_status") or doc.status or "Draft" }}</div>
+              </div>
+            </div>
+          </td>
+          <td style="width: 170px;">
+            {% if doc.zatca_qr_payload %}
+            <div class="qr-panel">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ doc.zatca_qr_payload | urlencode }}" alt="ZATCA QR">
+              <div class="qr-caption">Compliance QR only. No guest invoice access is exposed through this code.</div>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <table class="summary-grid">
+      <tr>
+        <td class="summary-card">
+          <div class="section-kicker">Invoice Summary</div>
+          <table class="mini-table">
+            <tr>
+              <td class="mini-label">Issue Time</td>
+              <td class="mini-value">{% if doc.get("custom_zatca_submit_time") %}{{ frappe.utils.format_datetime(doc.custom_zatca_submit_time, "dd-MM-yyyy HH:mm:ss") }}{% else %}{{ doc.posting_date }} {{ doc.posting_time or "" }}{% endif %}</td>
+              <td class="mini-ar">تاريخ ووقت الإصدار</td>
+            </tr>
+            <tr>
+              <td class="mini-label">Due Date</td>
+              <td class="mini-value">{{ doc.due_date or "-" }}</td>
+              <td class="mini-ar">تاريخ الاستحقاق</td>
+            </tr>
+            <tr>
+              <td class="mini-label">DN</td>
+              <td class="mini-value">{{ delivery_note_name or "-" }}</td>
+              <td class="mini-ar">مذكرة التسليم</td>
+            </tr>
+            <tr>
+              <td class="mini-label">Supply Date</td>
+              <td class="mini-value">{{ delivery_date or doc.posting_date or "-" }}</td>
+              <td class="mini-ar">تاريخ التوريد</td>
+            </tr>
+          </table>
+        </td>
+        <td class="summary-spacer"></td>
+        <td class="summary-card">
+          <div class="section-kicker">Supply Ref.</div>
+          <table class="mini-table">
+            <tr>
+              <td class="mini-label">Vendor No</td>
+              <td class="mini-value">{{ customer_doc.get("vendor_number") or "-" }}</td>
+              <td class="mini-ar">رقم البائع</td>
+            </tr>
+            <tr>
+              <td class="mini-label">PO No</td>
+              <td class="mini-value">{{ doc.po_no or "-" }}</td>
+              <td class="mini-ar">رقم طلب الشراء</td>
+            </tr>
+            <tr>
+              <td class="mini-label">Agreement</td>
+              <td class="mini-value">{{ sales_order.get("purchase_agreement") if sales_order else "-" }}</td>
+              <td class="mini-ar">رقم العقد</td>
+            </tr>
+            <tr>
+              <td class="mini-label">ASN / Truck / GR</td>
+              <td class="mini-value">{{ dn_item.get("asn_number") if dn_item else "-" }} / {{ dn_item.get("truck_request_number") if dn_item else "-" }} / {{ doc.reference_no or "-" }}</td>
+              <td class="mini-ar">أ س ن / طلب الشاحنة / جي آر</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <table class="party-grid">
+      <tr>
+        <td class="party-column">
+          <div class="party-card">
+            <div class="party-title"><strong>Seller</strong><span>المورد</span></div>
+            <div class="party-name">{{ company.company_name }}</div>
+            <div class="party-name-ar">{{ company_ar }}</div>
+            <table class="party-rows">
+              <tr><td>Name</td><td>{{ company.company_name }}</td><td>الاسم</td></tr>
+              <tr><td>VAT Number</td><td>{{ doc.company_tax_id or company.tax_id or "-" }}</td><td>الرقم الضريبي</td></tr>
+              <tr><td>CR Number</td><td>{{ company.get("registration_details") or company.get("cr_number") or "-" }}</td><td>السجل التجاري</td></tr>
+              <tr><td>Building No</td><td>{{ (company_addr.get("address_title") if company_addr else "") or "-" }}</td><td>رقم المبنى</td></tr>
+              <tr><td>Street</td><td>{{ (company_addr.get("address_line1") if company_addr else "") or "-" }}</td><td>اسم الشارع</td></tr>
+              <tr><td>District</td><td>{{ (company_addr.get("address_line2") if company_addr else "") or "-" }}</td><td>الحي</td></tr>
+              <tr><td>City / Country</td><td>{{ (company_addr.get("city") if company_addr else "") or "-" }} / {{ (company_addr.get("country") if company_addr else "") or "-" }}</td><td>المدينة / البلد</td></tr>
+              <tr><td>Postal / Add. No</td><td>{{ (company_addr.get("pincode") if company_addr else "") or "-" }} / {{ (company_addr.get("additional_number") if company_addr else "") or "-" }}</td><td>الرمز / الإضافي</td></tr>
+            </table>
+          </div>
+        </td>
+        <td class="party-gap"></td>
+        <td class="party-column">
+          <div class="party-card">
+            <div class="party-title"><strong>Buyer</strong><span>العميل</span></div>
+            <div class="party-name">{{ doc.customer_name }}</div>
+            <div class="party-name-ar">{{ customer_ar }}</div>
+            <table class="party-rows">
+              <tr><td>Name</td><td>{{ doc.customer_name }}</td><td>الاسم</td></tr>
+              <tr><td>VAT Number</td><td>{{ doc.tax_id or customer_doc.get("tax_id") or "-" }}</td><td>الرقم الضريبي</td></tr>
+              <tr><td>CR Number</td><td>{{ customer_doc.get("cr") or customer_doc.get("registration_number") or "-" }}</td><td>السجل التجاري</td></tr>
+              <tr><td>Building No</td><td>{{ (customer_addr.get("address_title") if customer_addr else "") or "-" }}</td><td>رقم المبنى</td></tr>
+              <tr><td>Street</td><td>{{ (customer_addr.get("address_line1") if customer_addr else "") or "-" }}</td><td>اسم الشارع</td></tr>
+              <tr><td>District</td><td>{{ (customer_addr.get("address_line2") if customer_addr else "") or "-" }}</td><td>الحي</td></tr>
+              <tr><td>City / Country</td><td>{{ (customer_addr.get("city") if customer_addr else "") or "-" }} / {{ (customer_addr.get("country") if customer_addr else "") or "-" }}</td><td>المدينة / البلد</td></tr>
+              <tr><td>Postal / Add. No</td><td>{{ (customer_addr.get("pincode") if customer_addr else "") or "-" }} / {{ (customer_addr.get("additional_number") if customer_addr else "") or "-" }}</td><td>الرمز / الإضافي</td></tr>
+            </table>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <div class="block">
+      <div class="block-head">
+        <strong>Line Items</strong>
+        <span>تفاصيل السلع أو الخدمات</span>
+      </div>
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th style="width: 5%;">PO</th>
+            <th style="width: 31%;">Goods / Services / التفاصيل</th>
+            <th style="width: 12%;">Unit / الوحدة</th>
+            <th style="width: 10%;">Qty / الكمية</th>
+            <th style="width: 16%;">Taxable / الخاضع</th>
+            <th style="width: 11%;">VAT / الضريبة</th>
+            <th style="width: 15%;">Incl. VAT / شامل</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in doc.items %}
+          <tr>
+            <td class="num">{{ row.get("line_item") or loop.index }}</td>
+            <td>
+              <div class="item-name">{{ row.item_name or row.item_code }}</div>
+              <div class="item-code">{{ row.item_code }}</div>
+              {%- set item_description = (row.description or "") | striptags | trim -%}
+              {%- if item_description and item_description != (row.item_name or "") and item_description != (row.item_code or "") %}<div class="item-code">{{ item_description }}</div>{% endif -%}
+            </td>
+            <td class="num">{{ frappe.format(row.rate, {"fieldtype":"Currency"}, doc) }}</td>
+            <td class="num">{{ row.qty }} {% if row.uom %}<div class="item-code">{{ row.uom }}</div>{% endif %}</td>
+            <td class="num">{{ frappe.format(row.amount, {"fieldtype":"Currency"}, doc) }}</td>
+            <td class="num">{{ frappe.format(row.tax_amount or 0, {"fieldtype":"Currency"}, doc) }}</td>
+            <td class="num">{{ frappe.format((row.amount or 0) + (row.tax_amount or 0), {"fieldtype":"Currency"}, doc) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <table class="totals-grid">
+      <tr>
+        <td class="tax-card">
+          <div class="section-kicker">Tax Summary</div>
+          <table class="tax-table">
+            <thead>
+              <tr>
+                <th>Tax Details</th>
+                <th class="num">Taxable Amount</th>
+                <th class="num">Tax Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for tax in doc.taxes %}
+              <tr>
+                <td>{{ tax.description or tax.account_head }}</td>
+                <td class="num">{{ frappe.format(doc.base_net_total if doc.currency != "SAR" else doc.net_total, {"fieldtype":"Currency"}, doc) }}</td>
+                <td class="num">{{ frappe.format(tax.tax_amount or tax.base_tax_amount or 0, {"fieldtype":"Currency"}, doc) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </td>
+        <td class="summary-spacer"></td>
+        <td class="totals-card">
+          <div class="section-kicker">Total Amounts</div>
+          <table class="totals-table">
+            {% if doc.discount_amount %}
+            <tr><td>Discount</td><td class="num">{{ frappe.format(doc.discount_amount, {"fieldtype":"Currency"}, doc) }}</td></tr>
+            {% endif %}
+            <tr><td>Total excl. VAT</td><td class="num">{{ frappe.format(doc.total, {"fieldtype":"Currency"}, doc) }}</td></tr>
+            <tr><td>Total VAT</td><td class="num">{{ frappe.format(doc.total_taxes_and_charges, {"fieldtype":"Currency"}, doc) }}</td></tr>
+            <tr><td>Paid Amount</td><td class="num">{{ frappe.format(doc.paid_amount or 0, {"fieldtype":"Currency"}, doc) }}</td></tr>
+            <tr><td>Outstanding</td><td class="num">{{ frappe.format(doc.outstanding_amount, {"fieldtype":"Currency"}, doc) }}</td></tr>
+            <tr><td>Grand Total</td><td class="num">{{ frappe.format(doc.grand_total, {"fieldtype":"Currency"}, doc) }}</td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <div class="block">
+      <div class="block-head">
+        <strong>Bank Details</strong>
+        <span>التفاصيل المصرفية</span>
+      </div>
+      <table class="bank-table">
+        <tr>
+          <td>Account Name</td>
+          <td>{{ bank_account.account_name if bank_account else "-" }}</td>
+          <td>اسم الحساب</td>
+          <td>{{ bank_account.account_name if bank_account else "-" }}</td>
+        </tr>
+        <tr>
+          <td>Bank Name</td>
+          <td>{{ bank_account.bank if bank_account else "-" }}</td>
+          <td>اسم البنك</td>
+          <td>{{ bank_name_ar if bank_account else "-" }}</td>
+        </tr>
+        <tr>
+          <td>IBAN</td>
+          <td>{{ bank_account.iban if bank_account else "-" }}</td>
+          <td>رقم الآيبان</td>
+          <td>{{ bank_account.iban if bank_account else "-" }}</td>
+        </tr>
+        <tr>
+          <td>Swift Code</td>
+          <td>{{ bank_swift if bank_account else "-" }}</td>
+          <td>رمز السويفت</td>
+          <td>{{ bank_swift if bank_account else "-" }}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="footnote">
+      <div><strong>In Words:</strong> {{ doc.in_words or "-" }}</div>
+      {% if doc.get("custom_invoice_xml") %}
+      <div style="margin-top: 6px;"><strong>Embedded XML Source:</strong> {{ doc.get("custom_invoice_xml") }}</div>
+      {% endif %}
+      <div style="margin-top: 3px;">QR contains ZATCA compliance data only. Guest users are not allowed to open this invoice through the QR code.</div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,522 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:VAT-PROC-.YYYY.-.#####",
+ "creation": "2026-04-26 16:33:04.271650",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "source_future_ocr_section",
+  "process_type",
+  "source_type",
+  "source_document",
+  "upload_actions_html",
+  "column_break_source",
+  "ocr_reference",
+  "extracted_text",
+  "extraction_confidence",
+  "requires_review",
+  "company_posting_section",
+  "company",
+  "company_name_arabic",
+  "posting_date",
+  "invoice_date",
+  "external_invoice_no",
+  "column_break_posting",
+  "currency",
+  "vat_rate",
+  "notes",
+  "party_section",
+  "customer",
+  "document_customer_name_text",
+  "document_customer_name_arabic",
+  "document_customer_vat_no",
+  "document_customer_cr_no",
+  "document_customer_address_text",
+  "party_name_text",
+  "party_name_arabic",
+  "party_vat_no",
+  "column_break_party",
+  "supplier",
+  "issuer_name_text",
+  "issuer_name_arabic",
+  "issuer_vat_no",
+  "issuer_cr_no",
+  "issuer_address_text",
+  "party_cr_no",
+  "party_address_text",
+  "create_party_if_missing",
+  "helpers_section",
+  "company_user",
+  "company_user_full_name",
+  "amounts_section",
+  "net_total",
+  "vat_amount",
+  "grand_total",
+  "column_break_amounts",
+  "rounding_adjustment",
+  "difference_amount",
+  "totals_validated",
+  "items_section",
+  "items",
+  "created_document_section",
+  "created_invoice_type",
+  "created_sales_invoice",
+  "created_purchase_invoice",
+  "column_break_created",
+  "invoice_created_on",
+  "invoice_created_by",
+  "status_section",
+  "status",
+  "rejection_reason",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "source_future_ocr_section",
+   "fieldtype": "Section Break",
+   "label": "Source / Future OCR"
+  },
+  {
+   "fieldname": "process_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Process Type",
+   "options": "Sales\nPurchase"
+  },
+  {
+   "fieldname": "source_type",
+   "fieldtype": "Select",
+   "label": "Source Type",
+   "options": "Manual\nScanner\nUpload\nWhatsApp\nEmail\nAPI"
+  },
+  {
+   "fieldname": "source_document",
+   "fieldtype": "Attach",
+   "label": "Source Document"
+  },
+  {
+   "fieldname": "upload_actions_html",
+   "fieldtype": "HTML",
+   "label": "Upload Documents"
+  },
+  {
+   "fieldname": "column_break_source",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ocr_reference",
+   "fieldtype": "Data",
+   "label": "OCR Reference"
+  },
+  {
+   "fieldname": "extracted_text",
+   "fieldtype": "Long Text",
+   "label": "Extracted Text"
+  },
+  {
+   "fieldname": "extraction_confidence",
+   "fieldtype": "Percent",
+   "label": "Extraction Confidence"
+  },
+  {
+   "default": "1",
+   "fieldname": "requires_review",
+   "fieldtype": "Check",
+   "label": "Requires Review"
+  },
+  {
+   "fieldname": "company_posting_section",
+   "fieldtype": "Section Break",
+   "label": "Company / Posting"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "default": "Today",
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Posting Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "invoice_date",
+   "fieldtype": "Date",
+   "label": "Invoice Date"
+  },
+  {
+   "fieldname": "external_invoice_no",
+   "fieldtype": "Data",
+   "label": "External Invoice No"
+  },
+  {
+   "fieldname": "column_break_posting",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "company_name_arabic",
+   "fieldtype": "Data",
+   "label": "Company Name Arabic",
+   "read_only": 1
+  },
+  {
+   "default": "15",
+   "fieldname": "vat_rate",
+   "fieldtype": "Percent",
+   "label": "VAT Rate"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "party_section",
+   "fieldtype": "Section Break",
+   "label": "Party"
+  },
+  {
+   "depends_on": "eval:doc.process_type==='Sales'",
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "document_customer_name_text",
+   "fieldtype": "Data",
+   "label": "Document Customer Name"
+  },
+  {
+   "fieldname": "document_customer_name_arabic",
+   "fieldtype": "Data",
+   "label": "Document Customer Name Arabic"
+  },
+  {
+   "fieldname": "document_customer_vat_no",
+   "fieldtype": "Data",
+   "label": "Document Customer VAT No"
+  },
+  {
+   "fieldname": "document_customer_cr_no",
+   "fieldtype": "Data",
+   "label": "Document Customer CR No"
+  },
+  {
+   "fieldname": "document_customer_address_text",
+   "fieldtype": "Small Text",
+   "label": "Document Customer Address"
+  },
+  {
+   "fieldname": "party_name_text",
+   "fieldtype": "Data",
+   "label": "Party Name"
+  },
+  {
+   "fieldname": "party_name_arabic",
+   "fieldtype": "Data",
+   "label": "Party Name Arabic"
+  },
+  {
+   "fieldname": "party_vat_no",
+   "fieldtype": "Data",
+   "label": "Party VAT No"
+  },
+  {
+   "fieldname": "column_break_party",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.process_type==='Purchase'",
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "label": "Supplier",
+   "options": "Supplier"
+  },
+  {
+   "fieldname": "issuer_name_text",
+   "fieldtype": "Data",
+   "label": "Issuer Name"
+  },
+  {
+   "fieldname": "issuer_name_arabic",
+   "fieldtype": "Data",
+   "label": "Issuer Name Arabic"
+  },
+  {
+   "fieldname": "issuer_vat_no",
+   "fieldtype": "Data",
+   "label": "Issuer VAT No"
+  },
+  {
+   "fieldname": "issuer_cr_no",
+   "fieldtype": "Data",
+   "label": "Issuer CR No"
+  },
+  {
+   "fieldname": "issuer_address_text",
+   "fieldtype": "Small Text",
+   "label": "Issuer Address"
+  },
+  {
+   "fieldname": "party_cr_no",
+   "fieldtype": "Data",
+   "label": "Party CR No"
+  },
+  {
+   "fieldname": "party_address_text",
+   "fieldtype": "Small Text",
+   "label": "Party Address"
+  },
+  {
+   "default": "0",
+   "fieldname": "create_party_if_missing",
+   "fieldtype": "Check",
+   "label": "Create Party If Missing"
+  },
+  {
+   "fieldname": "helpers_section",
+   "fieldtype": "Section Break",
+   "label": "User / Company Helpers"
+  },
+  {
+   "fieldname": "company_user",
+   "fieldtype": "Link",
+   "label": "Company User",
+   "options": "User"
+  },
+  {
+   "fetch_from": "company_user.full_name",
+   "fieldname": "company_user_full_name",
+   "fieldtype": "Data",
+   "label": "Company User Full Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amounts_section",
+   "fieldtype": "Section Break",
+   "label": "Amounts"
+  },
+  {
+   "fieldname": "net_total",
+   "fieldtype": "Currency",
+   "label": "Net Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "vat_amount",
+   "fieldtype": "Currency",
+   "label": "VAT Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grand_total",
+   "fieldtype": "Currency",
+   "label": "Grand Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_amounts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "rounding_adjustment",
+   "fieldtype": "Currency",
+   "label": "Rounding Adjustment"
+  },
+  {
+   "fieldname": "difference_amount",
+   "fieldtype": "Currency",
+   "label": "Difference Amount",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "totals_validated",
+   "fieldtype": "Check",
+   "label": "Totals Validated",
+   "read_only": 1
+  },
+  {
+   "fieldname": "items_section",
+   "fieldtype": "Section Break",
+   "label": "Items"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "VAT Process Item"
+  },
+  {
+   "fieldname": "created_document_section",
+   "fieldtype": "Section Break",
+   "label": "Created ERPNext Document"
+  },
+  {
+   "fieldname": "created_invoice_type",
+   "fieldtype": "Select",
+   "label": "Created Invoice Type",
+   "options": "\nSales Invoice\nPurchase Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_sales_invoice",
+   "fieldtype": "Link",
+   "label": "Created Sales Invoice",
+   "options": "Sales Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_purchase_invoice",
+   "fieldtype": "Link",
+   "label": "Created Purchase Invoice",
+   "options": "Purchase Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_created",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "invoice_created_on",
+   "fieldtype": "Datetime",
+   "label": "Invoice Created On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_created_by",
+   "fieldtype": "Link",
+   "label": "Invoice Created By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Draft\nExtracted\nNeeds Review\nReviewed\nInvoice Created\nRejected\nCancelled"
+  },
+  {
+   "fieldname": "rejection_reason",
+   "fieldtype": "Small Text",
+   "label": "Rejection Reason"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "VAT Process",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-04-26 16:39:49.042505",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "VAT Process",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "VAT Process User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "VAT Process Reviewer",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "VAT Process Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

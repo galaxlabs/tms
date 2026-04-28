@@ -33,7 +33,7 @@ def run_server_script_for_doc_event(doc, event):
 
 def get_notifications_map():
     """Get mapping."""
-    if frappe.flags.in_patch and not frappe.db.table_exists("WhatsApp Notification"):
+    if not frappe.db.table_exists("WhatsApp Notification"):
         return {}
 
     notification_map = {}
@@ -107,6 +107,9 @@ def trigger_whatsapp_notifications_monthly_long():
 
 def trigger_whatsapp_notifications(event):
     """Run cron."""
+    if not frappe.db.table_exists("WhatsApp Notification"):
+        return
+
     wa_notify_list = frappe.get_list(
         "WhatsApp Notification",
         filters={

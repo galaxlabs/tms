@@ -5,6 +5,12 @@ from tms.utils.chrome_pdf import get_pdf as chrome_get_pdf
 
 def generate_pdf(doctype, name, print_format=None):
     """Render HTML → PDF using Chrome engine."""
+    if not print_format and doctype == "Sales Invoice":
+        from tms.utils.zatca_invoice import resolve_sales_invoice_print_format
+
+        doc = frappe.get_doc(doctype, name)
+        print_format = resolve_sales_invoice_print_format(doc)
+
     html = frappe.get_print(
         doctype,
         name,

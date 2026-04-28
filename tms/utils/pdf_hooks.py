@@ -1,6 +1,12 @@
 import frappe
 from frappe.utils.file_manager import save_file
 from tms.utils.chrome_pdf import get_pdf as chrome_get_pdf
+from tms.utils.pdf_engine import generate_pdf, save_pdf
+from tms.utils.zatca_invoice import (
+    DEFAULT_ZATCA_PDFA_PRINT_FORMAT,
+    generate_sales_invoice_pdfa_3b_bytes,
+    resolve_sales_invoice_print_format,
+)
 
 
 def create_trip_pdf(doc, event=None):
@@ -49,85 +55,71 @@ def create_trip_pdf(doc, event=None):
         is_private=0,  # PUBLIC required for WhatsApp
     )
 
-# import frappe
-# from frappe import _
-# from frappe import publish_progress
+def create_pdf_on_submit(doc, event=None):
+    """Create a PDF attachment for doctypes enabled in PDF Settings."""
+    settings = _get_pdf_settings()
+    slug = doc.doctype.lower().replace(" ", "_")
 
-# from tms.utils.pdf_engine import generate_pdf, save_pdf
+    if not settings or not settings.get(slug):
+        return
 
+    if doc.doctype == "Trip":
+        create_trip_pdf(doc, event=event)
+        return
 
-# def create_pdf_on_submit(doc, event=None):
-#     """
-#     Called from hooks.py for on_submit events.
-#     Reads Single Doctype: PDF Settings
-#     """
+    if _pdf_attachment_exists(doc):
+        return
 
-#     settings = frappe.get_single("PDF Settings")
+    previous_lang = getattr(frappe.local, "lang", None)
 
-#     # Convert Doctype to fieldname
-#     slug = doc.doctype.lower().replace(" ", "_")  # "Sales Invoice" -> "sales_invoice"
-#     if not settings.get(slug):
-#         return  # PDF generation disabled for this Doctype
+    try:
+        lang = getattr(doc, "language", None)
+        if lang:
+            frappe.local.lang = lang
 
-#     # Progress for UI (optional)
-#     publish_progress(percent=10, title=_("Creating PDF..."))
+        if doc.doctype == "Sales Invoice":
+            selected_format = resolve_sales_invoice_print_format(doc)
+            if selected_format == DEFAULT_ZATCA_PDFA_PRINT_FORMAT:
+                pdf_bytes, _, _ = generate_sales_invoice_pdfa_3b_bytes(doc, print_format=selected_format)
+            else:
+                pdf_bytes = generate_pdf(doc.doctype, doc.name, print_format=selected_format)
+        else:
+            pdf_bytes = generate_pdf(doc.doctype, doc.name)
 
-#     # Optional language override
-#     lang = getattr(doc, "language", None)
-#     if lang:
-#         frappe.local.lang = lang
+        file_url, _, file_id = save_pdf(
+            pdf_bytes,
+            doc.doctype,
+            doc.name,
+            folder="Home/Attachments",
+            public=False,
+        )
 
-#     # Determine print format
-#     print_format = None
-#     if doc.doctype == "Trip":
-#         print_format = "Trip"  # your default Trip format
-#     else:
-#         # default / custom logic for other doctypes
-#         print_format = None
-
-#     # 1. Generate PDF (Chrome-based)
-#     pdf_bytes = generate_pdf(doc.doctype, doc.name, print_format=print_format)
-
-#     publish_progress(percent=60, title=_("Saving PDF..."))
-
-#     # 2. Folder structure
-#     folder = _build_folder_tree(doc)
-
-#     # 3. For Trip → PUBLIC PDF (WhatsApp)
-#     make_public = True if doc.doctype == "Trip" else False
-
-#     file_url, file_name, file_id = save_pdf(
-#         pdf_bytes,
-#         doc.doctype,
-#         doc.name,
-#         folder=folder,
-#         public=make_public,
-#     )
-
-#     publish_progress(percent=100, title=_("PDF Created Successfully"))
-
-#     # Optional: store PDF on doc
-#     if hasattr(doc, "last_pdf_url"):
-#         doc.db_set("last_pdf_url", file_url)
-#     if hasattr(doc, "last_pdf_file"):
-#         doc.db_set("last_pdf_file", file_id)
+        if hasattr(doc, "last_pdf_url"):
+            doc.db_set("last_pdf_url", file_url, update_modified=False)
+        if hasattr(doc, "last_pdf_file"):
+            doc.db_set("last_pdf_file", file_id, update_modified=False)
+    finally:
+        frappe.local.lang = previous_lang
 
 
-# def _build_folder_tree(doc):
-#     """Organize PDFs by Doctype / Party."""
-#     from frappe.core.doctype.file.file import create_new_folder
+def _get_pdf_settings():
+    if not frappe.db.exists("DocType", "PDF Settings"):
+        return None
 
-#     doctype_folder = f"Home/{doc.doctype}"
-#     if not frappe.db.exists("File", doctype_folder):
-#         create_new_folder(doc.doctype, "Home")
+    return frappe.get_single("PDF Settings")
 
-#     subfolder_name = getattr(doc, "customer", None) or getattr(doc, "party_name", None)
-#     if not subfolder_name:
-#         subfolder_name = doc.name
 
-#     full_path = f"{doctype_folder}/{subfolder_name}"
-
-#     if not frappe.db.exists("File", full_path):
-#         create_new_folder(subfolder_name, doctype_folder)
-
-#     return full_path
+def _pdf_attachment_exists(doc):
+    expected_file_name = f"{doc.doctype}-{doc.name}.pdf".replace(" ", "-").replace("/", "-")
+    return bool(
+        frappe.get_all(
+            "File",
+            filters={
+                "attached_to_doctype": doc.doctype,
+                "attached_to_name": doc.name,
+                "file_name": expected_file_name,
+            },
+            limit=1,
+            pluck="name",
+        )
+    )

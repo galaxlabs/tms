@@ -335,7 +335,12 @@ doc_events = {
         "on_submit": "tms.utils.pdf_hooks.create_pdf_on_submit"
     },
     "Sales Invoice": {
-        "on_submit": "tms.utils.pdf_hooks.create_pdf_on_submit"
+        "on_update": "tms.api.invoice_public.set_invoice_public_qr",
+        "before_submit": "tms.api.invoice_public.set_invoice_public_qr",
+        "on_submit": [
+            "tms.api.invoice_public.set_invoice_public_qr",
+            "tms.utils.pdf_hooks.create_pdf_on_submit",
+        ],
     },
     "Delivery Note": {
         "on_submit": "tms.utils.pdf_hooks.create_pdf_on_submit"

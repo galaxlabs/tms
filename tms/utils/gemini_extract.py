@@ -137,6 +137,79 @@ def gemini_extract_identity_fields(ocr_text: str, hint: str = "") -> dict:
         "debug": {"model": model}
     }
 
+
+def extract_vat_invoice_with_gemini(ocr_text: str, hint: str = "") -> dict:
+    """
+    Extract VAT invoice parties, dates, totals, and simple line items from OCR text.
+    """
+
+    key = _get_gemini_key()
+    model = frappe.conf.get("google_gemini_model") or DEFAULT_MODEL
+
+    system = (
+        "You are a strict VAT invoice extraction engine.\n"
+        "Read OCR text from Arabic/English invoices and return ONLY valid JSON.\n"
+        "Focus on issuer details, customer details, invoice reference, dates, VAT rate, totals, and items."
+    )
+
+    prompt = {
+        "task": "extract_vat_invoice",
+        "rules": [
+            "Return ONLY JSON object. No markdown.",
+            "issuer_* fields belong to the company that issued the invoice/letterhead.",
+            "document_customer_* fields belong to the customer shown on the invoice.",
+            "invoice_date must use YYYY-MM-DD when possible.",
+            "process_type_hint must be Sales, Purchase, or empty string.",
+            "vat_rate is numeric only.",
+            "items must be a JSON array of rows with item_text, qty, rate, vat_rate.",
+            "If a value is unknown, return empty string or 0.",
+        ],
+        "hint": hint or "",
+        "ocr_text": (ocr_text or "")[:16000],
+    }
+
+    url = f"{GEMINI_BASE}/models/{model}:generateContent"
+    params = {"key": key}
+    payload = {
+        "systemInstruction": {"parts": [{"text": system}]},
+        "contents": [{"role": "user", "parts": [{"text": json.dumps(prompt, ensure_ascii=False)}]}],
+        "generationConfig": {
+            "temperature": 0.1,
+            "topP": 0.9,
+            "maxOutputTokens": 1536,
+            "responseMimeType": "application/json",
+        },
+    }
+
+    try:
+        response = requests.post(url, params=params, json=payload, timeout=45)
+        data = response.json()
+    except Exception as exc:
+        frappe.log_error(frappe.get_traceback(), "Gemini VAT Invoice Extraction Failed")
+        return {"confidence": 0, "error": str(exc)}
+
+    if response.status_code != 200:
+        frappe.log_error(json.dumps(data, ensure_ascii=False), "Gemini VAT Invoice Extraction Error")
+        return {"confidence": 0, "error": data}
+
+    try:
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+        result = json.loads(text)
+    except Exception:
+        frappe.log_error(json.dumps(data, ensure_ascii=False), "Gemini VAT Invoice JSON Parse Failed")
+        return {"confidence": 0, "error": data}
+
+    result["issuer_name_text"] = _clean_name(result.get("issuer_name_text", ""))
+    result["document_customer_name_text"] = _clean_name(result.get("document_customer_name_text", ""))
+    result["issuer_vat_no"] = _clean_id(result.get("issuer_vat_no", ""))
+    result["document_customer_vat_no"] = _clean_id(result.get("document_customer_vat_no", ""))
+    result["external_invoice_no"] = _clean_id(result.get("external_invoice_no", ""))
+    result["confidence"] = int(result.get("confidence") or 0)
+    result["vat_rate"] = float(result.get("vat_rate") or 0)
+    result["items"] = result.get("items") if isinstance(result.get("items"), list) else []
+    result["debug"] = {"model": model}
+    return result
+
 def gemini_extract_from_file_url(file_url: str) -> dict:
     """
     Direct vision extraction: send file bytes to Gemini and return stable JSON.

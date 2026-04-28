@@ -1,56 +1,29 @@
-import secrets
 import frappe
 
+from tms.utils.zatca_invoice import (
+    ensure_public_invoice_qr,
+    render_sales_invoice_html,
+    render_sales_invoice_pdf,
+)
+
 def set_public_invoice_qr(doc, method=None):
-    base_url = "https://tms.galaxylabs.online"
-    print_format = "Sales Invoice Print"
-
-    # token storage reuse: zatca_qr_png
-    if not doc.zatca_qr_png:
-        doc.zatca_qr_png = secrets.token_urlsafe(16)
-
-    key = doc.zatca_qr_png
-
-    # public URL (served by our own whitelisted method below)
-    doc.zatca_qr_payload = (
-        f"{base_url}/api/method/tms.api.invoice_qr.public_print?"
-        f"name={doc.name}&key={key}&format={print_format}"
+    return ensure_public_invoice_qr(
+        doc,
+        method=method,
+        endpoint="tms.api.invoice_qr.print_invoice",
     )
 
 
-@frappe.whitelist(allow_guest=True)
-def public_print(name, key, format="Sales Invoice Print"):
-    # fetch invoice
-    doc = frappe.get_doc("Sales Invoice", name)
+@frappe.whitelist()
+def public_print(name, key=None, format=None):
+    return render_sales_invoice_html(name, key, print_format=format)
 
-    # validate token
-    if not doc.zatca_qr_png or doc.zatca_qr_png != key:
-        frappe.throw("Invalid link", frappe.PermissionError)
 
-    # render print (HTML)
-    html = frappe.get_print("Sales Invoice", name, print_format=format)
-
-    return html
-
-@frappe.whitelist(allow_guest=True)
-def print_invoice(name, token, format="Sales Invoice Print"):
-    """
-    Public printable invoice endpoint
-    QR opens THIS
-    """
-
-    doc = frappe.get_doc("Sales Invoice", name)
-
-    # Validate token
-    if not doc.zatca_qr_png or doc.zatca_qr_png != token:
-        frappe.throw("Invalid or expired link", frappe.PermissionError)
-
-    # Render print HTML
-    html = frappe.get_print(
-        doctype="Sales Invoice",
-        name=name,
-        print_format=format,
-        no_letterhead=0
-    )
-
-    return html
+@frappe.whitelist()
+def print_invoice(name, token=None, format=None):
+    pdf = render_sales_invoice_pdf(name, token, print_format=format)
+    frappe.local.response.filename = f"{name}.pdf"
+    frappe.local.response.filecontent = pdf
+    frappe.local.response.type = "download"
+    frappe.local.response.display_content_as = "inline"
+    frappe.local.response.content_type = "application/pdf"
