@@ -49,26 +49,30 @@ def calculate_item_amounts(item, vat_mode):
 class TripInvoice(Document):
 	def validate(self):
 		self.set_defaults()
-		self.validate_unique_trip()
+		self.validate_unique_scope()
 		self.calculate_totals()
 
 	def set_defaults(self):
 		settings = get_trip_invoice_settings()
 		self.customer = self.customer or settings.get("default_customer") or "Walking Customer"
 		self.company = self.company or settings.get("default_company")
-		self.vat_template = self.vat_template or settings.get("default_vat_template")
-		self.vat_account = self.vat_account or settings.get("default_vat_account")
+		self.vat_template = self.vat_template or get_default_vat_template(self.company, settings)
+		self.vat_account = self.vat_account or get_default_vat_account(self.company, settings)
 		self.vat_rate = flt(self.vat_rate if self.vat_rate is not None else settings.get("default_vat_rate") or 15)
 		self.invoice_date = self.invoice_date or nowdate()
 		self.status = self.status or "Draft"
+		self.invoice_scope = self.invoice_scope or "Trip"
 		self.resolve_vat_account()
 
-	def validate_unique_trip(self):
+	def validate_unique_scope(self):
 		if not self.trip:
 			return
-		existing = frappe.db.get_value("Trip Invoice", {"trip": self.trip}, "name")
+		filters = {"trip": self.trip, "invoice_scope": self.invoice_scope or "Trip"}
+		if self.invoice_scope == "Passenger":
+			filters["passenger_row"] = self.passenger_row
+		existing = frappe.db.get_value("Trip Invoice", filters, "name")
 		if existing and existing != self.name:
-			frappe.throw(_("Trip Invoice {0} already exists for Trip {1}.").format(existing, self.trip))
+			frappe.throw(_("Trip Invoice {0} already exists for this Trip scope.").format(existing))
 
 	def calculate_totals(self):
 		net_total = 0
@@ -93,11 +97,13 @@ class TripInvoice(Document):
 		if self.vat_template or self.vat_account:
 			return
 		settings = get_trip_invoice_settings()
-		if settings.get("default_vat_template"):
-			self.vat_template = settings.get("default_vat_template")
+		default_template = get_default_vat_template(self.company, settings)
+		if default_template:
+			self.vat_template = default_template
 			return
-		if settings.get("default_vat_account"):
-			self.vat_account = settings.get("default_vat_account")
+		default_account = get_default_vat_account(self.company, settings)
+		if default_account:
+			self.vat_account = default_account
 			return
 		if not (settings.get("create_missing_vat_account") or self.auto_create_vat_account):
 			return
@@ -112,6 +118,34 @@ def get_trip_invoice_settings():
 	if not frappe.db.exists("DocType", "Trip Invoice Settings"):
 		return frappe._dict()
 	return frappe.get_single("Trip Invoice Settings").as_dict()
+
+
+def get_default_vat_template(company=None, settings=None):
+	settings = settings or get_trip_invoice_settings()
+	if company:
+		abbr = frappe.db.get_value("Company", company, "abbr")
+		if abbr:
+			dynamic_template = f"KSA VAT 15% - {abbr}"
+			if frappe.db.exists("Sales Taxes and Charges Template", dynamic_template):
+				return dynamic_template
+	for template in (settings.get("default_vat_template"), "KSA VAT 15%"):
+		if template and frappe.db.exists("Sales Taxes and Charges Template", template):
+			return template
+	return None
+
+
+def get_default_vat_account(company=None, settings=None):
+	settings = settings or get_trip_invoice_settings()
+	if company:
+		abbr = frappe.db.get_value("Company", company, "abbr")
+		if abbr:
+			dynamic_account = f"VAT 15% - {abbr}"
+			if frappe.db.exists("Account", dynamic_account):
+				return dynamic_account
+	fallback = settings.get("default_vat_account") or "VAT 15% - CELTC"
+	if fallback and frappe.db.exists("Account", fallback):
+		return fallback
+	return settings.get("default_vat_account")
 
 
 def get_or_create_vat_account(company):
@@ -157,6 +191,21 @@ def get_passenger_mobile(row):
 	return row.get("mobile_no") or row.get("contact_no")
 
 
+def get_trip_passengers(trip):
+	return [row for row in trip.get("passengers") or [] if row.get("passenger_name") or row.get("id_no") or row.get("mobile_no")]
+
+
+def get_uninvoiced_passengers(trip):
+	return [row for row in get_trip_passengers(trip) if not row.get("trip_invoice")]
+
+
+def get_per_passenger_value(trip):
+	passenger_count = len(get_trip_passengers(trip))
+	if passenger_count <= 0:
+		return flt(trip.trip_value)
+	return flt(trip.trip_value) / passenger_count
+
+
 def make_item_description(trip, passenger_name=None):
 	parts = [trip.name]
 	if trip.trip_route:
@@ -168,9 +217,10 @@ def make_item_description(trip, passenger_name=None):
 	return " | ".join([p for p in parts if p])
 
 
-def append_auto_trip_item(invoice, trip, settings):
+def append_auto_trip_item(invoice, trip, settings, rate_override=None):
 	billing_mode = trip.billing_mode or "Route Amount"
 	description = make_item_description(trip, invoice.invoice_passenger_name)
+	line_rate = flt(rate_override if rate_override is not None else trip.trip_value)
 	common = {
 		"source_type": "Trip Route",
 		"trip": trip.name,
@@ -188,7 +238,7 @@ def append_auto_trip_item(invoice, trip, settings):
 				"item_code": settings.get("default_route_item"),
 				"qty": 1,
 				"uom": settings.get("default_uom_route"),
-				"rate": flt(trip.trip_value),
+				"rate": line_rate,
 			},
 		)
 	elif billing_mode == "KM Based":
@@ -201,24 +251,16 @@ def append_auto_trip_item(invoice, trip, settings):
 				"item_code": settings.get("default_km_item"),
 				"qty": flt(trip.distance),
 				"uom": settings.get("default_uom_km"),
-				"rate": flt(trip.trip_value) / flt(trip.distance),
+				"rate": line_rate / flt(trip.distance),
 			},
 		)
 
 
-@frappe.whitelist()
-def create_trip_invoice_from_trip(trip_name):
-	trip = frappe.get_doc("Trip", trip_name)
-	existing = frappe.db.get_value("Trip Invoice", {"trip": trip.name}, "name")
-	if existing:
-		frappe.throw(_("Trip Invoice already exists: {0}").format(existing))
-
-	settings = get_trip_invoice_settings()
-	selected_passenger = get_selected_invoice_passenger(trip)
-	passenger_name = get_passenger_name(selected_passenger) or trip.get("invoice_passenger_name")
-	passenger_mobile = get_passenger_mobile(selected_passenger) or trip.get("invoice_passenger_mobile")
+def make_trip_invoice_doc(trip, settings, passenger=None, invoice_scope="Trip", allocated_count=1, rate_override=None):
+	passenger_name = get_passenger_name(passenger) or trip.get("invoice_passenger_name")
+	passenger_mobile = get_passenger_mobile(passenger) or trip.get("invoice_passenger_mobile")
 	customer = (
-		(selected_passenger.get("customer") if selected_passenger else None)
+		(passenger.get("customer") if passenger else None)
 		or trip.get("customer")
 		or settings.get("default_customer")
 		or "Walking Customer"
@@ -227,6 +269,9 @@ def create_trip_invoice_from_trip(trip_name):
 	invoice = frappe.new_doc("Trip Invoice")
 	invoice.company = trip.get("company") or settings.get("default_company")
 	invoice.trip = trip.name
+	invoice.invoice_scope = invoice_scope
+	invoice.passenger_row = passenger.get("name") if passenger else None
+	invoice.allocated_passenger_count = allocated_count
 	invoice.customer = customer
 	invoice.invoice_passenger_name = passenger_name
 	invoice.invoice_passenger_mobile = passenger_mobile
@@ -234,18 +279,89 @@ def create_trip_invoice_from_trip(trip_name):
 	invoice.from_location = trip.from_location
 	invoice.to_location = trip.to_location
 	invoice.distance = flt(trip.distance)
-	invoice.trip_value = flt(trip.trip_value)
+	invoice.trip_value = flt(rate_override if rate_override is not None else trip.trip_value)
 	invoice.billing_mode = trip.get("billing_mode") or "Route Amount"
 	invoice.vat_mode = trip.get("vat_mode") or "Included"
 	invoice.vat_rate = flt(trip.get("vat_rate") or settings.get("default_vat_rate") or 15)
-	invoice.vat_template = settings.get("default_vat_template")
-	invoice.vat_account = settings.get("default_vat_account")
+	invoice.vat_template = get_default_vat_template(invoice.company, settings)
+	invoice.vat_account = get_default_vat_account(invoice.company, settings)
 	invoice.tax_category = trip.get("tax_category")
 	invoice.invoice_date = nowdate()
 	invoice.status = "Draft"
 
-	append_auto_trip_item(invoice, trip, settings)
+	if invoice_scope == "Trip" and passenger is None and allocated_count > 1:
+		invoice.invoice_passenger_name = trip.get("invoice_passenger_name") or _("Remaining {0} passengers").format(allocated_count)
+
+	append_auto_trip_item(invoice, trip, settings, rate_override=rate_override)
+	return invoice
+
+
+@frappe.whitelist()
+def create_trip_invoice_from_trip(trip_name, invoice_mode="Trip", passenger_rows=None):
+	trip = frappe.get_doc("Trip", trip_name)
+	settings = get_trip_invoice_settings()
+	invoice_mode = invoice_mode or "Trip"
+	passengers = get_trip_passengers(trip)
+
+	if invoice_mode == "Passenger":
+		if passenger_rows:
+			if isinstance(passenger_rows, str):
+				passenger_rows = json.loads(passenger_rows)
+			passengers = [row for row in passengers if row.name in passenger_rows]
+		passengers = [row for row in passengers if not row.get("trip_invoice")]
+		if not passengers:
+			frappe.throw(_("No uninvoiced passengers found for this Trip."))
+
+		per_passenger_value = get_per_passenger_value(trip)
+		created = []
+		for passenger in passengers:
+			invoice = make_trip_invoice_doc(
+				trip,
+				settings,
+				passenger=passenger,
+				invoice_scope="Passenger",
+				allocated_count=1,
+				rate_override=per_passenger_value,
+			)
+			invoice.insert()
+			frappe.db.set_value("Passengers", passenger.name, {"trip_invoice_created": 1, "trip_invoice": invoice.name})
+			created.append(invoice)
+		trip.db_set("trip_invoice_created", 1)
+		if len(created) == 1:
+			trip.db_set("trip_invoice", created[0].name)
+		return {
+			"trip": trip.name,
+			"trip_invoice": created[0].name if len(created) == 1 else None,
+			"trip_invoices": [doc.name for doc in created],
+			"trip_invoice_created": 1,
+			"status": "Draft",
+			"kashf_ready": 0,
+			"can_print": 0,
+		}
+
+	remaining_passengers = get_uninvoiced_passengers(trip)
+	existing_trip_scope = frappe.db.get_value("Trip Invoice", {"trip": trip.name, "invoice_scope": "Trip"}, "name")
+	if existing_trip_scope:
+		frappe.throw(_("Trip Invoice already exists: {0}").format(existing_trip_scope))
+
+	allocated_count = len(remaining_passengers) or len(passengers) or 1
+	rate_override = flt(trip.trip_value)
+	if passengers and len(remaining_passengers) != len(passengers):
+		rate_override = get_per_passenger_value(trip) * allocated_count
+
+	selected_passenger = get_selected_invoice_passenger(trip)
+	invoice = make_trip_invoice_doc(
+		trip,
+		settings,
+		passenger=selected_passenger,
+		invoice_scope="Trip",
+		allocated_count=allocated_count,
+		rate_override=rate_override,
+	)
 	invoice.insert()
+
+	for passenger in remaining_passengers:
+		frappe.db.set_value("Passengers", passenger.name, {"trip_invoice_created": 1, "trip_invoice": invoice.name})
 
 	trip.db_set("trip_invoice_created", 1)
 	trip.db_set("trip_invoice", invoice.name)

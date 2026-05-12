@@ -11,7 +11,9 @@
         "id_no",
         "is_invoice_customer",
         "customer",
-        "notes"
+        "notes",
+        "trip_invoice_created",
+        "trip_invoice"
     ],
  "fields": [
         {
@@ -50,6 +52,20 @@
             "fieldname": "notes",
             "fieldtype": "Small Text",
             "label": "Notes"
+        },
+        {
+            "default": "0",
+            "fieldname": "trip_invoice_created",
+            "fieldtype": "Check",
+            "label": "Trip Invoice Created",
+            "read_only": 1
+        },
+        {
+            "fieldname": "trip_invoice",
+            "fieldtype": "Link",
+            "label": "Trip Invoice",
+            "options": "Trip Invoice",
+            "read_only": 1
         }
  ],
  "grid_page_length": 50,

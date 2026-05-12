@@ -94,19 +94,38 @@ frappe.ui.form.on("Trip", {
 			return;
 		}
 
-		if (!frm.doc.trip_invoice_created && frm.doc.trip_value) {
+		if (frm.doc.trip_value) {
 			frm.add_custom_button(
 				__("Create Trip Invoice"),
 				() => {
 					frappe.call({
 						method:
 							"tms.transport_management_system.doctype.trip_invoice.trip_invoice.create_trip_invoice_from_trip",
-						args: { trip_name: frm.doc.name },
+						args: { trip_name: frm.doc.name, invoice_mode: "Trip" },
 						freeze: true,
 						freeze_message: __("Creating Trip Invoice..."),
 						callback(r) {
 							if (!r.message) return;
-							frappe.msgprint(__("Trip Invoice created: {0}", [r.message.trip_invoice]));
+							frappe.msgprint(__("Trip Invoice created: {0}", [r.message.trip_invoice || r.message.trip_invoices]));
+							frm.reload_doc();
+						},
+					});
+				},
+				__("Trip Actions")
+			);
+
+			frm.add_custom_button(
+				__("Create Passenger Trip Invoices"),
+				() => {
+					frappe.call({
+						method:
+							"tms.transport_management_system.doctype.trip_invoice.trip_invoice.create_trip_invoice_from_trip",
+						args: { trip_name: frm.doc.name, invoice_mode: "Passenger" },
+						freeze: true,
+						freeze_message: __("Creating Passenger Trip Invoices..."),
+						callback(r) {
+							if (!r.message) return;
+							frappe.msgprint(__("Trip Invoices created: {0}", [(r.message.trip_invoices || []).join(", ")]));
 							frm.reload_doc();
 						},
 					});
