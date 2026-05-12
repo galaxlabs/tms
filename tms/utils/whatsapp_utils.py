@@ -1,9 +1,5 @@
 import frappe
-from frappe.utils.file_manager import save_file
 from frappe.utils import now_datetime
-from tms.utils.chrome_pdf import get_pdf as chrome_get_pdf
-import traceback
-import re
 
 
 def can_send_session_message(phone: str) -> bool:
@@ -132,122 +128,10 @@ def get_or_create_contact(whatsapp_id: str, display_name: str | None = None):
 
 @frappe.whitelist()
 def send_trip_pdf_via_whatsapp(trip_name: str):
-    """Generate (or reuse) Trip PDF and send it to driver via WhatsApp Message."""
+    """Compatibility wrapper for the shared WhatsApp PDF sender."""
+    from tms.utils.whatsapp_document import send_trip_pdf_via_whatsapp as send_trip_pdf
 
-    # 1) Load Trip + Driver
-    trip = frappe.get_doc("Trip", trip_name)
-    staff = frappe.get_doc("Staff", trip.driver)
-
-    # Clean phone
-    phone = normalize_phone(staff.mobile_no)
-    if not phone:
-        frappe.throw("Driver phone number is missing or invalid.")
-
-    # Ensure WhatsApp Contact exists (for analysis / linking)
-    get_or_create_contact(
-        whatsapp_id=phone,
-        display_name=getattr(staff, "full_name", None) or staff.name,
-    )
-
-    # 2) Ensure we have a PUBLIC PDF file attached to Trip
-    existing_files = frappe.get_all(
-        "File",
-        filters={"attached_to_doctype": "Trip", "attached_to_name": trip_name},
-        fields=["name", "file_url", "file_name", "is_private"],
-        order_by="creation desc",
-    )
-
-    file_url = None
-    file_name = None
-
-    # Prefer an already-public file, otherwise create one
-    for f in existing_files:
-        if not f.get("is_private"):
-            file_url = f["file_url"]
-            file_name = f["file_name"]
-            break
-
-    if not file_url:
-        # ✅ Generate HTML using your Trip print format and PDF using Chrome
-        print_format = "Trip"  # your default Trip print format name
-
-        html = frappe.get_print(
-            "Trip",
-            trip_name,
-            print_format=print_format,
-            doc=trip,
-            no_letterhead=0,
-        )
-
-        # Options similar to wkhtml; use what your chrome_pdf expects
-        pdf_content = chrome_get_pdf(html, options={"page-size": "A4"})
-
-        fname = f"Trip-{trip_name}.pdf"
-
-        file_doc = save_file(
-            fname=fname,
-            content=pdf_content,
-            dt="Trip",
-            dn=trip_name,
-            folder="Home/Attachments",
-            is_private=0,   # public so WhatsApp / Meta can access it
-        )
-        file_url = file_doc.file_url        # e.g. /files/Trip-TRIP-0001.pdf
-        file_name = file_doc.file_name
-
-    caption = f"Trip {trip_name} PDF attached."
-
-    # 3) Create WhatsApp Message as MANUAL DOCUMENT
-    msg = frappe.get_doc({
-        "doctype": "WhatsApp Message",
-        "type": "Outgoing",
-        "message_type": "Manual",        # Manual / Template
-        "to": phone,
-        "content_type": "document",      # tells before_insert to send as document
-        "attach": file_url,              # relative path; before_insert will prefix site URL
-        "message": caption,              # caption on the document
-        "reference_doctype": "Trip",
-        "reference_name": trip_name,
-    })
-
-    status = "Success"
-    response_payload = ""
-
-    try:
-        # Triggers before_insert -> notify() -> send to WhatsApp API
-        msg.insert(ignore_permissions=True)
-
-        if msg.status:
-            status = msg.status
-
-    except Exception:
-        status = "Failed"
-        response_payload = traceback.format_exc()
-
-    # 4) Log send result (WhatsApp Send Log)
-    if frappe.db.exists("DocType", "WhatsApp Send Log"):
-        frappe.get_doc({
-            "doctype": "WhatsApp Send Log",
-            "reference_doctype": "Trip",
-            "reference_name": trip.name,
-            "to": phone,
-            "message_type": "Document",      # just a label for reporting
-            "status": status,
-            "file_link": file_url,
-            "response_json": response_payload,
-            "sent_at": now_datetime(),
-        }).insert(ignore_permissions=True)
-
-    # 5) If failed → raise so user sees error
-    if status.lower() != "success":
-        frappe.throw("WhatsApp send failed. See WhatsApp Send Log / Error Log for details.")
-
-    # 6) Mark Kashf as sent once success
-    if hasattr(trip, "kashf_sent") and not trip.kashf_sent:
-        trip.db_set("kashf_sent", 1)
-        trip.add_comment("Info", f"Kashf PDF sent successfully at {now_datetime()}")
-
-    return {"status": "Success", "to": phone, "file_url": file_url}
+    return send_trip_pdf(trip_name)
 
 # import frappe
 # from frappe.utils.file_manager import save_file

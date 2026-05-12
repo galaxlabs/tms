@@ -209,16 +209,29 @@ def _get_invoice_date_expression(doctype):
 def _build_totals(sales_summary, purchase_summary):
 	vat_collected = flt(sales_summary.get("vat_total"))
 	vat_paid = flt(purchase_summary.get("vat_total"))
+	sales_invoice_amount = flt(sales_summary.get("grand_total"))
+	purchase_invoice_amount = flt(purchase_summary.get("grand_total"))
+	sales_invoice_count = int(sales_summary.get("invoice_count") or 0)
+	purchase_invoice_count = int(purchase_summary.get("invoice_count") or 0)
 	return {
 		"sales_net_total": flt(sales_summary.get("net_total")),
-		"sales_grand_total": flt(sales_summary.get("grand_total")),
-		"submitted_sales_invoices": int(sales_summary.get("invoice_count") or 0),
+		"sales_grand_total": sales_invoice_amount,
+		"sales_invoice_amount": sales_invoice_amount,
+		"sales_invoice_count": sales_invoice_count,
+		"submitted_sales_invoices": sales_invoice_count,
 		"purchase_net_total": flt(purchase_summary.get("net_total")),
-		"purchase_grand_total": flt(purchase_summary.get("grand_total")),
-		"submitted_purchase_invoices": int(purchase_summary.get("invoice_count") or 0),
+		"purchase_grand_total": purchase_invoice_amount,
+		"purchase_invoice_amount": purchase_invoice_amount,
+		"purchase_invoice_count": purchase_invoice_count,
+		"submitted_purchase_invoices": purchase_invoice_count,
 		"vat_collected": vat_collected,
+		"total_collected_vat_amount": vat_collected,
 		"vat_paid": vat_paid,
+		"total_paid_vat_amount": vat_paid,
 		"net_vat_payable": flt(vat_collected - vat_paid),
+		"vat_balance_difference": flt(vat_collected - vat_paid),
+		"invoice_amount_difference": flt(sales_invoice_amount - purchase_invoice_amount),
+		"purchase_minus_sales_difference": flt(purchase_invoice_amount - sales_invoice_amount),
 	}
 
 

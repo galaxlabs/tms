@@ -75,11 +75,11 @@
 //                     },
 //                     callback(r) {
 //                         if (r.message === "sent") {
-//                             frappe.msgprint("✅ Trip PDF sent via WhatsApp.");
+//                             frappe.msgprint("Trip PDF sent via WhatsApp.");
 //                             frm.set_value("kashf_sent", 1);
 //                             frm.save();
 //                         } else {
-//                             frappe.msgprint("⚠️ Could not send PDF.");
+//                             frappe.msgprint("Could not send PDF.");
 //                         }
 //                     }
 //                 });
@@ -87,3 +87,40 @@
 //         }
 //     }
 // });
+
+frappe.ui.form.on("Trip", {
+	refresh(frm) {
+		if (frm.is_new()) {
+			return;
+		}
+
+		if (!frm.doc.trip_invoice_created && frm.doc.trip_value) {
+			frm.add_custom_button(
+				__("Create Trip Invoice"),
+				() => {
+					frappe.call({
+						method:
+							"tms.transport_management_system.doctype.trip_invoice.trip_invoice.create_trip_invoice_from_trip",
+						args: { trip_name: frm.doc.name },
+						freeze: true,
+						freeze_message: __("Creating Trip Invoice..."),
+						callback(r) {
+							if (!r.message) return;
+							frappe.msgprint(__("Trip Invoice created: {0}", [r.message.trip_invoice]));
+							frm.reload_doc();
+						},
+					});
+				},
+				__("Trip Actions")
+			);
+		}
+
+		if (frm.doc.trip_invoice) {
+			frm.add_custom_button(
+				__("Open Trip Invoice"),
+				() => frappe.set_route("Form", "Trip Invoice", frm.doc.trip_invoice),
+				__("Trip Actions")
+			);
+		}
+	},
+});

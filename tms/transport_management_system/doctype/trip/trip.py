@@ -1,14 +1,11 @@
 # Copyright (c) 2025, Galaxy Labs and contributors
 # For license information, please see license.txt
 
-import os
 import json
 import frappe
 import uuid
 import pyqrcode as qrcode
-import base64
 import re  
-from io import BytesIO
 from frappe.website.website_generator import WebsiteGenerator
 from frappe.utils import getdate, get_url, add_to_date, flt, cint  # 👈 extend this line
 from hijri_converter import Gregorian
@@ -38,6 +35,10 @@ class Trip(WebsiteGenerator):
             self.db_set("qr_code", self.qr_code)
     
     def validate(self):
+        invoice_customers = [row for row in (self.passengers or []) if cint(row.get("is_invoice_customer"))]
+        if len(invoice_customers) > 1:
+            frappe.throw("Only one passenger can be selected as invoice customer.")
+
         if self.departure and self.duration_minutes:
             self.arrival = add_to_date(self.departure, minutes=int(self.duration_minutes), as_datetime=True)
         else:
@@ -166,8 +167,8 @@ class Trip(WebsiteGenerator):
                     if data.get("name"):
                         self.append("passengers", {
                             "passenger_name": data.get("name"),
-                            "idpassport_no": data.get("id_no", ""),
-                            "nationality": data.get("nationality", "")
+                            "id_no": data.get("id_no", ""),
+                            "mobile_no": data.get("mobile_no", "")
                         })
                         successful_extractions += 1
             
@@ -202,9 +203,8 @@ class Trip(WebsiteGenerator):
             if data.get("name"):
                 self.append("passengers", {
                     "passenger_name": data.get("name"),
-                    "idpassport_no": data.get("id_no", ""),
-                    "nationality": data.get("nationality", ""),
-                    "ocr_confidence": data.get("confidence", 0)
+                    "id_no": data.get("id_no", ""),
+                    "mobile_no": data.get("mobile_no", "")
                 })
                 
                 self.save(ignore_permissions=True)
@@ -248,14 +248,14 @@ class Trip(WebsiteGenerator):
                 # Store original values for learning
                 original_data = {
                     "name": passenger.passenger_name,
-                    "id_no": passenger.idpassport_no,
-                    "nationality": passenger.nationality
+                    "id_no": passenger.id_no,
+                    "mobile_no": passenger.mobile_no
                 }
                 
                 # Update with verified data
                 passenger.passenger_name = verified_data.get("name", passenger.passenger_name)
-                passenger.idpassport_no = verified_data.get("id_no", passenger.idpassport_no)
-                passenger.nationality = verified_data.get("nationality", passenger.nationality)
+                passenger.id_no = verified_data.get("id_no", passenger.id_no)
+                passenger.mobile_no = verified_data.get("mobile_no", passenger.mobile_no)
                 
                 # Learn from correction if values changed
                 if original_data != verified_data:

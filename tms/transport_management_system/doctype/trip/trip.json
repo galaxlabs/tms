@@ -8,7 +8,9 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "kashf_sent",
+        "kashf_sent",
+        "trip_invoice_created",
+        "trip_invoice",
   "column_break_eufa",
   "is_return_trip",
   "section_break_dvfs",
@@ -18,7 +20,12 @@
   "to_location",
   "departure",
   "distance",
-  "trip_value",
+        "trip_value",
+        "billing_mode",
+        "vat_mode",
+        "vat_rate",
+        "invoice_passenger_name",
+        "invoice_passenger_mobile",
   "driver_share",
   "trip_status",
   "mobile_no",
@@ -77,17 +84,47 @@
    "fieldtype": "Datetime",
    "label": "Departure"
   },
-  {
-   "fetch_from": "trip_route.distance",
-   "fieldname": "distance",
-   "fieldtype": "Data",
-   "label": "Distance"
-  },
-  {
-   "fieldname": "trip_value",
-   "fieldtype": "Data",
-   "label": "Trip Value"
-  },
+        {
+            "fetch_from": "trip_route.distance",
+            "fieldname": "distance",
+            "fieldtype": "Float",
+            "label": "Distance"
+        },
+        {
+            "fieldname": "trip_value",
+            "fieldtype": "Currency",
+            "label": "Trip Value"
+        },
+        {
+            "default": "Route Amount",
+            "fieldname": "billing_mode",
+            "fieldtype": "Select",
+            "label": "Billing Mode",
+            "options": "Route Amount\nKM Based\nManual"
+        },
+        {
+            "default": "Included",
+            "fieldname": "vat_mode",
+            "fieldtype": "Select",
+            "label": "VAT Mode",
+            "options": "Included\nManual Add VAT\nNo VAT"
+        },
+        {
+            "default": "15",
+            "fieldname": "vat_rate",
+            "fieldtype": "Percent",
+            "label": "VAT Rate"
+        },
+        {
+            "fieldname": "invoice_passenger_name",
+            "fieldtype": "Data",
+            "label": "Invoice Passenger Name"
+        },
+        {
+            "fieldname": "invoice_passenger_mobile",
+            "fieldtype": "Data",
+            "label": "Invoice Passenger Mobile"
+        },
   {
    "fieldname": "driver_share",
    "fieldtype": "Currency",
@@ -213,13 +250,27 @@
    "hidden": 1,
    "label": "Mobile No"
   },
-  {
-   "default": "Imran Khan",
-   "fieldname": "kashf_sent",
-   "fieldtype": "Check",
-   "label": "Kashf Sent?",
-   "search_index": 1
-  },
+        {
+            "default": "0",
+            "fieldname": "kashf_sent",
+            "fieldtype": "Check",
+            "label": "Kashf Sent?",
+            "search_index": 1
+        },
+        {
+            "default": "0",
+            "fieldname": "trip_invoice_created",
+            "fieldtype": "Check",
+            "label": "Trip Invoice Created",
+            "read_only": 1
+        },
+        {
+            "fieldname": "trip_invoice",
+            "fieldtype": "Link",
+            "label": "Trip Invoice",
+            "options": "Trip Invoice",
+            "read_only": 1
+        },
   {
    "fieldname": "section_break_dvfs",
    "fieldtype": "Section Break"
@@ -248,11 +299,11 @@
    "fieldtype": "Check",
    "label": "Is Return Trip"
   },
-  {
-   "fieldname": "arrived_at",
-   "fieldtype": "Datetime",
-   "label": "Arrrived at"
-  }
+        {
+            "fieldname": "arrived_at",
+            "fieldtype": "Datetime",
+            "label": "Arrived At"
+        }
  ],
  "grid_page_length": 50,
  "has_web_view": 1,

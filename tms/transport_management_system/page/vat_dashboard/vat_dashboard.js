@@ -87,9 +87,9 @@ tms.vat_dashboard.Page = class VATDashboardPage {
 				<div class="vat-dashboard-hero">
 					<div>
 						<p class="vat-dashboard-kicker">${__("Compliance Pulse")}</p>
-						<h1>${__("VAT Collection vs Recovery")}</h1>
+						<h1>${__("VAT Amounts, VAT Flow, and Filing Gap")}</h1>
 						<p class="vat-dashboard-subtitle">
-							${__("Track live or submitted invoice VAT, review pipeline pressure, and surface audit-watch gaps before filing.")}
+							${__("Track total sales amount, total purchase amount, collected VAT, paid VAT, and the live gap before month-end filing.")}
 						</p>
 					</div>
 					<div class="vat-dashboard-hero-chip">
@@ -226,40 +226,39 @@ tms.vat_dashboard.Page = class VATDashboardPage {
 
 	renderSummaryCards(data, currency) {
 		const totals = data.totals || {};
-		const stats = data.stats || {};
 		const isSubmitted = data.filters?.document_mode === "submitted";
 		const salesMetaLabel = isSubmitted ? __("submitted sales invoices") : __("live sales invoices");
 		const purchaseMetaLabel = isSubmitted ? __("submitted purchase invoices") : __("live purchase invoices");
 		const cards = [
 			{
-				label: __("VAT Collected"),
-				value: this.formatCurrency(totals.vat_collected, currency),
-				meta: `${totals.submitted_sales_invoices || 0} ${salesMetaLabel}`,
+				label: __("Total Sales Invoice Amount"),
+				value: this.formatCurrency(totals.sales_invoice_amount, currency),
+				meta: `${totals.sales_invoice_count || totals.submitted_sales_invoices || 0} ${salesMetaLabel}`,
 			},
 			{
-				label: __("VAT Paid"),
-				value: this.formatCurrency(totals.vat_paid, currency),
-				meta: `${totals.submitted_purchase_invoices || 0} ${purchaseMetaLabel}`,
+				label: __("Total Purchase Invoice Amount"),
+				value: this.formatCurrency(totals.purchase_invoice_amount, currency),
+				meta: `${totals.purchase_invoice_count || totals.submitted_purchase_invoices || 0} ${purchaseMetaLabel}`,
 			},
 			{
-				label: __("Net VAT Position"),
-				value: this.formatCurrency(totals.net_vat_payable, currency),
-				meta: totals.net_vat_payable > 0 ? __("Payable exposure") : __("Recovery coverage"),
+				label: __("Total Collected VAT"),
+				value: this.formatCurrency(totals.total_collected_vat_amount, currency),
+				meta: __("Sales invoice VAT total"),
 			},
 			{
-				label: __("Coverage Ratio"),
-				value: `${Number(stats.vat_coverage_ratio || 0).toFixed(2)}%`,
-				meta: __("Purchase VAT vs collected VAT"),
+				label: __("Total Paid VAT"),
+				value: this.formatCurrency(totals.total_paid_vat_amount, currency),
+				meta: __("Purchase invoice VAT total"),
 			},
 			{
-				label: __("Pending Review"),
-				value: String(stats.pending_review_count || 0),
-				meta: __("Draft + Extracted + Needs Review"),
+				label: __("Invoice Amount Difference"),
+				value: this.formatCurrency(totals.invoice_amount_difference, currency),
+				meta: __("Sales amount minus purchase amount"),
 			},
 			{
-				label: __("Invoices Created"),
-				value: String(stats.invoice_created_count || 0),
-				meta: __("VAT Process converted to ERPNext invoices"),
+				label: __("VAT Difference"),
+				value: this.formatCurrency(totals.vat_balance_difference, currency),
+				meta: __("Collected VAT minus paid VAT"),
 			},
 		];
 

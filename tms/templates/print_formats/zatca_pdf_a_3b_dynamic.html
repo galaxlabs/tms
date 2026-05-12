@@ -1,6 +1,33 @@
 {% set company = frappe.get_doc("Company", doc.company) %}
+{# ---------------- Company English + Arabic Address ---------------- #}
+
+{% set company_ar = company.get("custom_company_name_arabic") or company.get("company_name_arabic") or company.company_name %}
+
+{# English company address from invoice selected company_address #}
+{% set company_addr_en = frappe.get_doc("Address", doc.company_address) if doc.company_address else None %}
+
+{# Arabic address: fetch by title/type. Adjust title if needed. #}
+{% set company_addr_ar_name = frappe.db.get_value(
+  "Address",
+  {
+    "address_title": "Address Arabic",
+    "is_your_company_address": 1,
+    "disabled": 0
+  },
+  "name"
+) %}
+
+{% set company_addr_ar = frappe.get_doc("Address", company_addr_ar_name) if company_addr_ar_name else None %}
+
+{% set company_phone = company.phone_no or (company_addr_en.phone if company_addr_en else "") or "0537051718" %}
+{% set company_email = company.email or (company_addr_en.email_id if company_addr_en else "") or "ceo@celtco.org" %}
+{% set company_website = company.website or "www.celtco.org" %}
+{% set company_vat = doc.company_tax_id or company.tax_id or "312449289400003" %}
+{% set company_cr = company.registration_details or "-" %}
 {% set customer_doc = frappe.get_doc("Customer", doc.customer) %}
-{% set company_ar = company.get("company_name_arabic") or company.get("custom_company_name_arabic") or company.company_name %}
+{% set company_ar = company.get("custom_company_name_arabic") or company.get("company_name_arabic") or company.company_name %}
+{% set fallback_logo = frappe.db.get_value("File", {"file_name": "Celtco Logo.png"}, "file_url") or frappe.db.get_value("File", {"file_name": "Logo.png"}, "file_url") or frappe.db.get_value("File", {"file_name": "Logo.jpeg"}, "file_url") %}
+{% set company_logo = company.get("company_logo") or fallback_logo or "/files/Celtco%20Logo.png" %}
 {% set customer_ar = customer_doc.get("customer_name_in_arabic") or doc.get("customer_name_in_arabic") or doc.customer_name %}
 {% set brand = company.custom_invoice_brand_color or "#0f766e" %}
 {% set variant = company.custom_invoice_style_variant or "Classic" %}
@@ -26,51 +53,81 @@
   --line: #d5dde2;
   --card: #ffffff;
 }
-body {
-  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+@font-face {
+  font-family: 'CascadiaCode-Bold';
+  src: url('/assets/tms/fonts/CascadiaCode-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'TSS Noto Naskh Arabic';
+  src: url('/assets/tms/fonts/NotoNaskhArabic-VariableFont_wght.ttf') format('truetype');
+  font-weight: 400 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'TSS Noto Sans Arabic';
+  src: url('/assets/tms/fonts/NotoSansArabic-VariableFont_wdth,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+}
+.body {
+  font-family: "Segoe UI", "TSS Noto Sans Arabic", Tahoma, Arial, sans-serif;
   font-size: 9.4px;
   color: var(--ink);
 }
-.print-format {
-  border-radius: 0 !important;
-  padding: 5mm !important;
+.brand-logo-cell {
+  /* small centered logo in the middle */
+  width: 136px;
+  text-align: center;
+  padding: 0 14px !important;
 }
-* { box-sizing: border-box; }
-.invoice-shell { position: relative; }
-.sheet {
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-  background: #ffffff;
+.brand-logo-frame {
+  display: inline-block;
+  min-width: 118px;
+  min-height: 74px;
+  padding: 4px 7px;
+  background: #fff;
+  text-align: center;
+  vertical-align: middle;
 }
-.hero {
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  border-radius: 0;
-  padding: 0 0 8px;
-  background: #ffffff;
+.brand-logo {
+  display: block;
+  /* reduced size for a small middle logo */
+  max-width: 90px;
+  max-height: 70px;
+  width: auto;
+  height: auto;
+  margin: 0 auto;
+  object-fit: contain;
 }
-.hero-grid {
-  width: 100%;
-  border-collapse: collapse;
+body .print-format .brand-logo-cell img.brand-logo {
+  width: auto !important;
+  max-width: 90px !important;
+  max-height: 70px !important;
+  height: auto !important;
 }
-.hero-grid td {
-  vertical-align: top;
+.brand-logo-fallback {
+  display: inline-block;
+  margin-top: 18px;
+  color: var(--brand);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
-.hero-title {
-  font-size: 18px;
+.hero-meta-wrap {
+  margin-top: 6px;
+}
+.hero-meta {
+  font-size: 16px;
+  color: var(--ink);
   font-weight: 600;
-  line-height: 1.12;
-  letter-spacing: 0;
-  margin: 0;
-}
-.hero-subtitle {
-  font-size: 10.5px;
-  color: var(--muted);
-  margin: 3px 0 5px;
+  line-height: 1.2;
+  text-align: center;
+  margin: 9px 0 2px;
 }
 .badge {
-  display: inline-block;
+  display: none;
   padding: 3px 8px;
   border-radius: 999px;
   background: var(--brand);
@@ -81,14 +138,135 @@ body {
   text-transform: uppercase;
 }
 .company-names {
-  margin-top: 5px;
+  margin-top: 0;
+}
+.company-header-box {
+  width: 100%;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.company-header-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.company-header-table td {
+  vertical-align: top !important;
+  border: 0 !important;
+}
+
+.company-info-en {
+  width: 39%;
+  text-align: left;
+  direction: ltr;
+  /* increased for better readability */
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.company-info-ar {
+  width: 39%;
+  text-align: right;
+  direction: rtl;
+  font-family: 'TSS Noto Sans Arabic', 'TSS Noto Naskh Arabic', Tahoma, sans-serif;
+  /* increased for better readability */
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.company-logo-mid {
+  width: 22%;
+  text-align: center;
+  vertical-align: middle !important;
+}
+
+.company-name-en {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 4px;
+}
+
+.company-name-ar {
+  font-size: 18px;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 4px;
+}
+
+.company-line {
+  margin-bottom: 2px;
+}
+
+.company-label {
+  font-weight: 600;
+  color: var(--brand);
+}
+
+.invoice-title-center {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: 6px;
+  color: var(--brand);
 }
 .company-ar {
+  font-family: 'CascadiaCode-Bold', 'TSS Noto Naskh Arabic', sans-serif !important;
   direction: rtl;
-  text-align: left;
-  font-size: 13px;
-  font-weight: 500;
-  margin-top: 2px;
+  text-align: right;
+  /* larger for prominent header */
+  font-size: 20px;
+  font-weight: 600;
+  color: #000;
+  line-height: 1.25;
+  unicode-bidi: plaintext;
+  display: block;
+  width: 100%;
+  margin-top: 0;
+}
+.brand-logo-cell {
+  /* widen the logo cell to allow a larger logo */
+  width: 220px;
+  text-align: center;
+  padding: 0 8px !important;
+}
+.brand-logo-frame {
+  display: inline-block;
+  /* allow larger frame for bigger logos */
+  min-width: 200px;
+  min-height: 120px;
+  padding: 4px 6px;
+  background: #fff;
+  text-align: center;
+  vertical-align: middle;
+}
+.brand-logo {
+  display: block;
+  /* increase maximum size so logo can be as large as reasonable for A4 header */
+  max-width: px;
+  max-height: 180px;
+  width: auto;
+  height: auto;
+  margin: 0 auto;
+  object-fit: contain;
+  vertical-align: middle;
+}
+body .print-format .brand-logo-cell img.brand-logo {
+  width: auto !important;
+  max-width: 200px !important;
+  max-height: 180px !important;
+  height: auto !important;
+}
+.brand-logo-fallback {
+  display: inline-block;
+  margin-top: 18px;
+  color: var(--brand);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 .hero-meta-wrap {
   margin-top: 6px;
@@ -110,8 +288,8 @@ body {
   margin-top: 1px;
 }
 .qr-panel {
-  width: 118px;
-  margin-left: auto;
+  width: 100%;
+  margin: 0 auto;
   border: 0;
   border-radius: 0;
   background: white;
@@ -119,14 +297,17 @@ body {
   text-align: center;
 }
 .qr-panel img {
-  width: 96px;
-  height: 96px;
+  display: block;
+  width: 94px;
+  height: 94px;
+  margin: 0 auto;
 }
 .qr-caption {
   margin-top: 3px;
   color: var(--muted);
   font-size: 7.4px;
   line-height: 1.2;
+  text-align: center;
 }
 .summary-grid {
   width: 100%;
@@ -176,6 +357,7 @@ body {
   font-weight: 500;
 }
 .mini-ar {
+  font-family: 'TSS Noto Sans Arabic', 'TSS Noto Naskh Arabic', sans-serif;
   width: 33%;
   text-align: right;
   direction: rtl;
@@ -223,6 +405,7 @@ body {
 }
 .party-title span {
   display: table-cell;
+  font-family: 'TSS Noto Sans Arabic', 'TSS Noto Naskh Arabic', sans-serif;
   direction: rtl;
   text-align: right;
   color: var(--muted);
@@ -261,6 +444,7 @@ body {
   word-break: break-word;
 }
 .party-rows td:last-child {
+  font-family: 'TSS Noto Sans Arabic', 'TSS Noto Naskh Arabic', sans-serif;
   width: 26%;
   direction: rtl;
   text-align: right;
@@ -287,6 +471,7 @@ body {
 }
 .block-head span {
   display: table-cell;
+  font-family: 'TSS Noto Sans Arabic', 'TSS Noto Naskh Arabic', sans-serif;
   direction: rtl;
   text-align: right;
   color: var(--muted);
@@ -344,6 +529,7 @@ body {
 .bank-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 .totals-table td,
 .tax-table td,
@@ -380,26 +566,38 @@ body {
   text-align: right;
   direction: ltr;
 }
-.bank-table td:first-child {
+.bank-table .bank-qr-cell {
+  width: 18%;
+  text-align: center;
+  vertical-align: middle !important;
+}
+.bank-table .bank-label {
   width: 18%;
   color: var(--muted);
   font-weight: 400;
 }
-.bank-table td:nth-child(2) {
-  width: 32%;
+.bank-table .bank-value {
+  width: 42%;
+  direction: ltr;
+  text-align: left;
   font-weight: 500;
+  word-break: break-word;
 }
-.bank-table td:nth-child(3) {
-  width: 18%;
+.bank-table .bank-label-ar {
+  width: 22%;
+  font-family: 'TSS Noto Sans Arabic', 'TSS Noto Naskh Arabic', sans-serif;
   color: var(--muted);
   text-align: right;
   direction: rtl;
   font-weight: 400;
 }
-.bank-table td:last-child {
-  width: 32%;
-  direction: rtl;
-  text-align: right;
+.bank-table .bank-qr-cell .qr-panel {
+  width: 100%;
+}
+.bank-table .bank-qr-cell .qr-caption {
+  max-width: 105px;
+  margin-left: auto;
+  margin-right: auto;
 }
 .footnote {
   margin-top: 7px;
@@ -450,102 +648,154 @@ body {
 
 <div class="invoice-shell {% if variant == 'Modern' %}modern{% elif variant == 'Minimal' %}minimal{% endif %}">
   <div class="sheet">
-    <div class="hero">
+    <!-- <div class="hero">
       <table class="hero-grid">
         <tr>
           <td>
-            <div class="badge">ZATCA PDF/A-3B</div>
-            <div class="company-names">
-              <div class="hero-title">{{ company.company_name }}</div>
-              <div class="company-ar">{{ company_ar }}</div>
-              <div class="hero-subtitle">Tax Invoice / فاتورة ضريبية</div>
-            </div>
-            <div class="hero-meta-wrap">
-              <div class="hero-meta">
-                <div class="hero-label">Invoice No</div>
-                <div class="hero-value">{{ doc.name }}</div>
-              </div>
-              <div class="hero-meta">
-                <div class="hero-label">Posting Date</div>
-                <div class="hero-value">{{ doc.posting_date }} {{ doc.posting_time or "" }}</div>
-              </div>
-              <div class="hero-meta">
-                <div class="hero-label">Due Date</div>
-                <div class="hero-value">{{ doc.due_date or "-" }}</div>
-              </div>
-              <div class="hero-meta">
-                <div class="hero-label">Status</div>
-                <div class="hero-value">{{ doc.get("custom_zatca_submit_status") or doc.status or "Draft" }}</div>
-              </div>
+            <div class="hero-title">{{ company.company_name }}</div>
+          </td>
+          <td class="brand-logo-cell">
+            <div class="brand-logo-frame">
+            {% if company_logo %}
+            <img class="brand-logo" src="{{ company_logo | replace(' ', '%20') }}" alt="{{ company.company_name }}">
+            {% else %}
+            <span class="brand-logo-fallback">{{ frappe.utils.get_abbr(company.company_name) }}</span>
+            {% endif %}
             </div>
           </td>
-          <td style="width: 170px;">
-            {% if doc.zatca_qr_payload %}
-            <div class="qr-panel">
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ doc.zatca_qr_payload | urlencode }}" alt="ZATCA QR">
-              <div class="qr-caption">Compliance QR only. No guest invoice access is exposed through this code.</div>
-            </div>
-            {% endif %}
+          <td>
+            <div class="company-ar">{{ company_ar }}</div>
           </td>
         </tr>
       </table>
-    </div>
+      <div class="hero-subtitle">Tax Invoice / فاتورة ضريبية</div>
+    </div> -->
+<div class="company-header-box">
+  <table class="company-header-table">
+    <tr>
+      <!-- English Company Details -->
+      <td class="company-info-en">
+        <div class="company-name-en">{{ company.company_name }}</div>
 
+        <div class="company-line">
+          Al-Basateen Commercial Center – Al-Awali
+        </div>
+
+        <div class="company-line">
+          Al-Numan Bin Malik Street – Bani Dhafar District
+        </div>
+
+        <div class="company-line">
+          Madinah, Saudi Arabia – 42316
+        </div>
+
+        <div class="company-line">
+          <span class="company-label">Mobile:</span> {{ company_phone }}
+        </div>
+
+        <div class="company-line">
+          <span class="company-label">Email:</span> {{ company_email }}
+        </div>
+
+        <div class="company-line">
+          <span class="company-label">Website:</span> {{ company_website }}
+        </div>
+
+        <div class="company-line">
+          <span class="company-label">VAT No:</span> {{ company_vat }}
+        </div>
+
+        <div class="company-line">
+          <span class="company-label">CR No:</span> {{ company_cr }}
+        </div>
+      </td>
+
+      <!-- Logo -->
+      <td class="company-logo-mid">
+        <div class="brand-logo-frame">
+          {% if company_logo %}
+          <img class="brand-logo" src="{{ company_logo | replace(' ', '%20') }}" alt="{{ company.company_name }}">
+          {% else %}
+          <span class="brand-logo-fallback">{{ frappe.utils.get_abbr(company.company_name) }}</span>
+          {% endif %}
+        </div>
+
+        <div class="invoice-title-center">
+          Tax Invoice<br>
+          <span style="font-family:'TSS Noto Sans Arabic'; direction:rtl;">فاتورة ضريبية</span>
+        </div>
+      </td>
+
+      <!-- Arabic Company Details -->
+      <td class="company-info-ar">
+        <div class="company-name-ar">{{ company_ar }}</div>
+
+        <div class="company-line">
+          مركز البساتين التجاري - العوالي
+        </div>
+
+        <div class="company-line">
+          شارع النعمان بن مالك – حي بني ظفر
+        </div>
+
+        <div class="company-line">
+          المدينة المنورة : 42316
+        </div>
+
+        <div class="company-line">
+          <span class="company-label">الجوال:</span> {{ company_phone }}
+        </div>
+
+        <div class="company-line">
+          <span class="company-label">البريد الإلكتروني:</span> {{ company_email }}
+        </div>
+
+        <div class="company-line">
+          <span class="company-label">الموقع الإلكتروني:</span> {{ company_website }}
+        </div>
+
+        <div class="company-line">
+          <span class="company-label">رقم ضريبة القيمة المضافة:</span> {{ company_vat }}
+        </div>
+
+        <div class="company-line">
+          <span class="company-label">السجل التجاري:</span> {{ company_cr }}
+        </div>
+      </td>
+    </tr>
+  </table>
+</div>
     <table class="summary-grid">
       <tr>
         <td class="summary-card">
-          <div class="section-kicker">Invoice Summary</div>
           <table class="mini-table">
             <tr>
-              <td class="mini-label">Issue Time</td>
-              <td class="mini-value">{% if doc.get("custom_zatca_submit_time") %}{{ frappe.utils.format_datetime(doc.custom_zatca_submit_time, "dd-MM-yyyy HH:mm:ss") }}{% else %}{{ doc.posting_date }} {{ doc.posting_time or "" }}{% endif %}</td>
+              <td class="mini-label">Issue Date</td>
+              <td class="mini-value">{% if doc.get("custom_zatca_submit_time") %}{{ frappe.utils.formatdate(doc.custom_zatca_submit_time, "dd-MM-yyyy") }}{% else %}{{ frappe.utils.formatdate(doc.posting_date, "dd-MM-yyyy") if doc.posting_date else "-" }}{% endif %}</td>
               <td class="mini-ar">تاريخ ووقت الإصدار</td>
             </tr>
             <tr>
-              <td class="mini-label">Due Date</td>
-              <td class="mini-value">{{ doc.due_date or "-" }}</td>
-              <td class="mini-ar">تاريخ الاستحقاق</td>
+              <td class="mini-label">Invoice No:</td>
+              <td class="mini-value">{{ doc.name or "-" }}</td>
+              <td class="mini-ar">رقم الفاتورة</td>
             </tr>
             <tr>
-              <td class="mini-label">DN</td>
+              <td class="mini-label">Customer Ref :</td>
               <td class="mini-value">{{ delivery_note_name or "-" }}</td>
-              <td class="mini-ar">مذكرة التسليم</td>
+              <td class="mini-ar">الرقم المرجعي للعميل</td>
             </tr>
             <tr>
-              <td class="mini-label">Supply Date</td>
+              <td class="mini-label">Project Code</td>
               <td class="mini-value">{{ delivery_date or doc.posting_date or "-" }}</td>
-              <td class="mini-ar">تاريخ التوريد</td>
+              <td class="mini-ar">رقم الحساب</td>
+            </tr>
+            <tr>
+              <td class="mini-label">Remarks</td>
+              <td class="mini-value">{{ frappe.utils.formatdate(doc.vat_date, "dd-MM-yyyy") if doc.vat_date else "-" }}</td>
+              <td class="mini-ar">ملاحظات</td>
             </tr>
           </table>
-        </td>
-        <td class="summary-spacer"></td>
-        <td class="summary-card">
-          <div class="section-kicker">Supply Ref.</div>
-          <table class="mini-table">
-            <tr>
-              <td class="mini-label">Vendor No</td>
-              <td class="mini-value">{{ customer_doc.get("vendor_number") or "-" }}</td>
-              <td class="mini-ar">رقم البائع</td>
-            </tr>
-            <tr>
-              <td class="mini-label">PO No</td>
-              <td class="mini-value">{{ doc.po_no or "-" }}</td>
-              <td class="mini-ar">رقم طلب الشراء</td>
-            </tr>
-            <tr>
-              <td class="mini-label">Agreement</td>
-              <td class="mini-value">{{ sales_order.get("purchase_agreement") if sales_order else "-" }}</td>
-              <td class="mini-ar">رقم العقد</td>
-            </tr>
-            <tr>
-              <td class="mini-label">ASN / Truck / GR</td>
-              <td class="mini-value">{{ dn_item.get("asn_number") if dn_item else "-" }} / {{ dn_item.get("truck_request_number") if dn_item else "-" }} / {{ doc.reference_no or "-" }}</td>
-              <td class="mini-ar">أ س ن / طلب الشاحنة / جي آر</td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
+      
 
     <table class="party-grid">
       <tr>
@@ -596,12 +846,14 @@ body {
         <thead>
           <tr>
             <th style="width: 5%;">PO</th>
-            <th style="width: 31%;">Goods / Services / التفاصيل</th>
-            <th style="width: 12%;">Unit / الوحدة</th>
+            <th style="width: 31%;">Goods / Services / تفاصيل السلع أو الخدمات</th>
             <th style="width: 10%;">Qty / الكمية</th>
-            <th style="width: 16%;">Taxable / الخاضع</th>
+            <th style="width: 12%;">Unit / سعرالوحدة </th>
+            <th style="width: 16%;">Amount / السعر الإجمالي</th>
             <th style="width: 11%;">VAT / الضريبة</th>
             <th style="width: 15%;">Incl. VAT / شامل</th>
+            <th style="width: 15%;">Total / السعر الإجمالي</th>
+            
           </tr>
         </thead>
         <tbody>
@@ -614,10 +866,12 @@ body {
               {%- set item_description = (row.description or "") | striptags | trim -%}
               {%- if item_description and item_description != (row.item_name or "") and item_description != (row.item_code or "") %}<div class="item-code">{{ item_description }}</div>{% endif -%}
             </td>
-            <td class="num">{{ frappe.format(row.rate, {"fieldtype":"Currency"}, doc) }}</td>
+
             <td class="num">{{ row.qty }} {% if row.uom %}<div class="item-code">{{ row.uom }}</div>{% endif %}</td>
+            <td class="num">{{ frappe.format(row.rate, {"fieldtype":"Currency"}, doc) }}</td>
             <td class="num">{{ frappe.format(row.amount, {"fieldtype":"Currency"}, doc) }}</td>
             <td class="num">{{ frappe.format(row.tax_amount or 0, {"fieldtype":"Currency"}, doc) }}</td>
+            <td class="num">{{ frappe.format((row.amount or 0) + (row.tax_amount or 0), {"fieldtype":"Currency"}, doc) }}</td>
             <td class="num">{{ frappe.format((row.amount or 0) + (row.tax_amount or 0), {"fieldtype":"Currency"}, doc) }}</td>
           </tr>
           {% endfor %}
@@ -672,28 +926,32 @@ body {
       </div>
       <table class="bank-table">
         <tr>
-          <td>Account Name</td>
-          <td>{{ bank_account.account_name if bank_account else "-" }}</td>
-          <td>اسم الحساب</td>
-          <td>{{ bank_account.account_name if bank_account else "-" }}</td>
+          <td class="bank-qr-cell" rowspan="4">
+            {% if doc.zatca_qr_payload %}
+            <div class="qr-panel">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ doc.zatca_qr_payload | urlencode }}" alt="ZATCA QR">
+              <div class="qr-caption">Compliance QR only. No guest invoice access is exposed through this code.</div>
+            </div>
+            {% endif %}
+          </td>
+          <td class="bank-label">Account Name</td>
+          <td class="bank-value">{{ bank_account.account_name if bank_account else "-" }}</td>
+          <td class="bank-label-ar">اسم الحساب</td>
         </tr>
         <tr>
-          <td>Bank Name</td>
-          <td>{{ bank_account.bank if bank_account else "-" }}</td>
-          <td>اسم البنك</td>
-          <td>{{ bank_name_ar if bank_account else "-" }}</td>
+          <td class="bank-label">Bank Name</td>
+          <td class="bank-value">{{ bank_account.bank if bank_account else "-" }}</td>
+          <td class="bank-label-ar">اسم البنك</td>
         </tr>
         <tr>
-          <td>IBAN</td>
-          <td>{{ bank_account.iban if bank_account else "-" }}</td>
-          <td>رقم الآيبان</td>
-          <td>{{ bank_account.iban if bank_account else "-" }}</td>
+          <td class="bank-label">IBAN</td>
+          <td class="bank-value">{{ bank_account.iban if bank_account else "-" }}</td>
+          <td class="bank-label-ar">رقم الآيبان</td>
         </tr>
         <tr>
-          <td>Swift Code</td>
-          <td>{{ bank_swift if bank_account else "-" }}</td>
-          <td>رمز السويفت</td>
-          <td>{{ bank_swift if bank_account else "-" }}</td>
+          <td class="bank-label">Swift Code</td>
+          <td class="bank-value">{{ bank_swift if bank_account else "-" }}</td>
+          <td class="bank-label-ar">رمز السويفت</td>
         </tr>
       </table>
     </div>

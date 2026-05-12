@@ -1,0 +1,268 @@
+{
+ "actions": [],
+ "autoname": "format:TINV-{YYYY}-{#####}",
+ "creation": "2026-05-12 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "trip",
+  "trip_route",
+  "from_location",
+  "distance",
+  "billing_mode",
+  "vat_rate",
+  "vat_account",
+  "net_total",
+  "rounding_difference",
+  "invoice_date",
+  "status",
+  "kashf_ready",
+  "kashf_sent",
+  "column_break_mfem",
+  "customer",
+  "invoice_passenger_name",
+  "invoice_passenger_mobile",
+  "to_location",
+  "trip_value",
+  "vat_mode",
+  "vat_template",
+  "tax_category",
+  "vat_amount",
+  "grand_total",
+  "external_reference_no",
+  "sales_invoice",
+  "kashf_sent_on",
+  "auto_create_vat_account",
+  "section_break_newd",
+  "items"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "trip",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Trip",
+   "options": "Trip",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "Walking Customer",
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "invoice_passenger_name",
+   "fieldtype": "Data",
+   "label": "Invoice Passenger Name"
+  },
+  {
+   "fieldname": "invoice_passenger_mobile",
+   "fieldtype": "Data",
+   "label": "Invoice Passenger Mobile"
+  },
+  {
+   "fetch_from": "trip.trip_route",
+   "fieldname": "trip_route",
+   "fieldtype": "Link",
+   "label": "Trip Route",
+   "options": "Route"
+  },
+  {
+   "fetch_from": "trip.from_location",
+   "fieldname": "from_location",
+   "fieldtype": "Small Text",
+   "label": "From Location"
+  },
+  {
+   "fetch_from": "trip.to_location",
+   "fieldname": "to_location",
+   "fieldtype": "Small Text",
+   "label": "To Location"
+  },
+  {
+   "fetch_from": "trip.distance",
+   "fieldname": "distance",
+   "fieldtype": "Float",
+   "label": "Distance"
+  },
+  {
+   "fieldname": "trip_value",
+   "fieldtype": "Currency",
+   "label": "Trip Value"
+  },
+  {
+   "default": "Route Amount",
+   "fieldname": "billing_mode",
+   "fieldtype": "Select",
+   "label": "Billing Mode",
+   "options": "Route Amount\nKM Based\nManual"
+  },
+  {
+   "default": "Included",
+   "fieldname": "vat_mode",
+   "fieldtype": "Select",
+   "label": "VAT Mode",
+   "options": "Included\nManual Add VAT\nNo VAT"
+  },
+  {
+   "default": "15",
+   "fieldname": "vat_rate",
+   "fieldtype": "Percent",
+   "label": "VAT Rate"
+  },
+  {
+   "fieldname": "vat_template",
+   "fieldtype": "Link",
+   "label": "VAT Template",
+   "options": "Sales Taxes and Charges Template"
+  },
+  {
+   "fieldname": "vat_account",
+   "fieldtype": "Link",
+   "label": "VAT Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "tax_category",
+   "fieldtype": "Link",
+   "label": "Tax Category",
+   "options": "Tax Category"
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_create_vat_account",
+   "fieldtype": "Check",
+   "label": "Auto Create VAT Account"
+  },
+  {
+   "fieldname": "net_total",
+   "fieldtype": "Currency",
+   "label": "Net Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "vat_amount",
+   "fieldtype": "Currency",
+   "label": "VAT Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grand_total",
+   "fieldtype": "Currency",
+   "label": "Grand Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rounding_difference",
+   "fieldtype": "Currency",
+   "label": "Rounding Difference",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_date",
+   "fieldtype": "Date",
+   "label": "Invoice Date"
+  },
+  {
+   "fieldname": "external_reference_no",
+   "fieldtype": "Data",
+   "label": "External Reference No"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nReady\nSales Invoice Created\nCancelled"
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "options": "Sales Invoice",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "kashf_ready",
+   "fieldtype": "Check",
+   "label": "Kashf Ready",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "kashf_sent",
+   "fieldtype": "Check",
+   "label": "Kashf Sent"
+  },
+  {
+   "fieldname": "kashf_sent_on",
+   "fieldtype": "Datetime",
+   "label": "Kashf Sent On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "Trip Invoice Item"
+  },
+  {
+   "fieldname": "column_break_mfem",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_newd",
+   "fieldtype": "Section Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-12 14:24:23.087484",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "Trip Invoice",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

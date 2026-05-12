@@ -1,0 +1,159 @@
+{
+ "actions": [],
+ "creation": "2026-05-12 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "source_type",
+  "route",
+  "item_name",
+  "description",
+  "vat_rate",
+  "total_amount",
+  "income_account",
+  "is_manual",
+  "column_break_tqwz",
+  "trip",
+  "item_code",
+  "qty",
+  "uom",
+  "rate",
+  "amount",
+  "vat_amount",
+  "cost_center",
+  "vat_category"
+ ],
+ "fields": [
+  {
+   "default": "Trip Route",
+   "fieldname": "source_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Source Type",
+   "options": "Trip Route\nManual Item\nAdjustment"
+  },
+  {
+   "fieldname": "trip",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Trip",
+   "options": "Trip"
+  },
+  {
+   "fieldname": "route",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Route",
+   "options": "Route"
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item Code",
+   "options": "Item"
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Name"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "default": "1",
+   "fieldname": "qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Qty"
+  },
+  {
+   "fieldname": "uom",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "UOM",
+   "options": "UOM"
+  },
+  {
+   "fieldname": "rate",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Rate"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount",
+   "read_only": 1
+  },
+  {
+   "default": "15",
+   "fieldname": "vat_rate",
+   "fieldtype": "Percent",
+   "label": "VAT Rate"
+  },
+  {
+   "fieldname": "vat_amount",
+   "fieldtype": "Currency",
+   "label": "VAT Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "label": "Total Amount",
+   "read_only": 1
+  },
+  {
+   "default": "Standard 15%",
+   "fieldname": "vat_category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "VAT Category",
+   "options": "Standard 15%\nZero Rated\nExempt\nOut of Scope"
+  },
+  {
+   "fieldname": "income_account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Income Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_manual",
+   "fieldtype": "Check",
+   "label": "Is Manual"
+  },
+  {
+   "fieldname": "column_break_tqwz",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-12 14:29:49.292567",
+ "modified_by": "Administrator",
+ "module": "Transport Management System",
+ "name": "Trip Invoice Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

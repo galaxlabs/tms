@@ -2,51 +2,49 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "format:VAT-PROC-.YYYY.-.#####",
- "creation": "2026-04-26 16:33:04.271650",
+ "creation": "2026-05-10 18:15:29.485011",
  "default_view": "List",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "source_future_ocr_section",
   "process_type",
-  "source_type",
-  "source_document",
-  "upload_actions_html",
-  "column_break_source",
-  "ocr_reference",
-  "extracted_text",
-  "extraction_confidence",
-  "requires_review",
-  "company_posting_section",
   "company",
-  "company_name_arabic",
   "posting_date",
+  "column_break_source",
+  "document_date",
   "invoice_date",
-  "external_invoice_no",
+  "required_by_date",
   "column_break_posting",
+  "valid_till",
   "currency",
   "vat_rate",
-  "notes",
+  "source_document",
+  "upload_actions_html",
+  "extraction_status",
+  "external_invoice_no",
+  "external_order_no",
   "party_section",
   "customer",
-  "document_customer_name_text",
-  "document_customer_name_arabic",
-  "document_customer_vat_no",
-  "document_customer_cr_no",
-  "document_customer_address_text",
   "party_name_text",
-  "party_name_arabic",
   "party_vat_no",
   "column_break_party",
   "supplier",
-  "issuer_name_text",
-  "issuer_name_arabic",
-  "issuer_vat_no",
-  "issuer_cr_no",
-  "issuer_address_text",
   "party_cr_no",
   "party_address_text",
   "create_party_if_missing",
+  "project_service_section",
+  "business_vertical",
+  "project",
+  "cost_center",
+  "column_break_project_service",
+  "site_location",
+  "contract_no",
+  "work_period_from",
+  "work_period_to",
+  "billing_basis",
+  "linked_sales_order",
+  "linked_purchase_order",
   "helpers_section",
   "company_user",
   "company_user_full_name",
@@ -55,41 +53,101 @@
   "vat_amount",
   "grand_total",
   "column_break_amounts",
+  "discount_amount",
+  "airfreight_charges",
   "rounding_adjustment",
   "difference_amount",
   "totals_validated",
   "items_section",
   "items",
+  "terms_notes_section",
+  "tc_name",
+  "terms",
+  "column_break_terms_notes",
+  "print_notes",
+  "notes",
   "created_document_section",
+  "created_document_type",
+  "created_document",
+  "is_proforma",
+  "column_break_created",
+  "sales_taxes_template",
+  "purchase_taxes_template",
+  "sales_vat_account",
+  "purchase_vat_account",
+  "status_section",
+  "review_status",
+  "setup_status",
+  "amended_from",
+  "source_type",
+  "ocr_reference",
+  "extracted_text",
+  "extraction_json",
+  "extraction_confidence",
+  "requires_review",
+  "document_customer_name_text",
+  "document_customer_name_arabic",
+  "document_customer_vat_no",
+  "document_customer_cr_no",
+  "document_customer_address_text",
+  "party_name_arabic",
+  "issuer_name_text",
+  "issuer_name_arabic",
+  "issuer_vat_no",
+  "issuer_cr_no",
+  "issuer_address_text",
+  "company_name_arabic",
+  "invoice_created_on",
+  "invoice_created_by",
   "created_invoice_type",
   "created_sales_invoice",
   "created_purchase_invoice",
-  "column_break_created",
-  "invoice_created_on",
-  "invoice_created_by",
-  "status_section",
+  "created_purchase_order",
+  "created_quotation",
+  "created_doctype",
   "status",
   "rejection_reason",
-  "amended_from"
+  "auto_create_vat_account",
+  "vat_account_type"
  ],
  "fields": [
   {
    "fieldname": "source_future_ocr_section",
    "fieldtype": "Section Break",
-   "label": "Source / Future OCR"
+   "label": "Document Info"
   },
   {
    "fieldname": "process_type",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Process Type",
-   "options": "Sales\nPurchase"
+   "options": "Sales Quotation\nSales Order\nProforma Invoice\nSales Invoice\nPurchase Order\nPurchase Invoice\nProject Billing\nService Billing",
+   "reqd": 1
   },
   {
    "fieldname": "source_type",
    "fieldtype": "Select",
+   "hidden": 1,
    "label": "Source Type",
    "options": "Manual\nScanner\nUpload\nWhatsApp\nEmail\nAPI"
+  },
+  {
+   "fieldname": "ocr_reference",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "OCR Reference"
+  },
+  {
+   "fieldname": "extracted_text",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Extracted Text"
+  },
+  {
+   "fieldname": "extraction_json",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Extraction JSON"
   },
   {
    "fieldname": "source_document",
@@ -106,37 +164,33 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "ocr_reference",
-   "fieldtype": "Data",
-   "label": "OCR Reference"
-  },
-  {
-   "fieldname": "extracted_text",
-   "fieldtype": "Long Text",
-   "label": "Extracted Text"
-  },
-  {
    "fieldname": "extraction_confidence",
    "fieldtype": "Percent",
+   "hidden": 1,
    "label": "Extraction Confidence"
+  },
+  {
+   "default": "Not Extracted",
+   "fieldname": "extraction_status",
+   "fieldtype": "Select",
+   "label": "Extraction Status",
+   "options": "Not Extracted\nExtracted\nFailed",
+   "read_only": 1
   },
   {
    "default": "1",
    "fieldname": "requires_review",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Requires Review"
-  },
-  {
-   "fieldname": "company_posting_section",
-   "fieldtype": "Section Break",
-   "label": "Company / Posting"
   },
   {
    "fieldname": "company",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Company",
-   "options": "Company"
+   "options": "Company",
+   "reqd": 1
   },
   {
    "default": "Today",
@@ -151,9 +205,29 @@
    "label": "Invoice Date"
   },
   {
+   "fieldname": "document_date",
+   "fieldtype": "Date",
+   "label": "Document Date"
+  },
+  {
+   "fieldname": "required_by_date",
+   "fieldtype": "Date",
+   "label": "Required By Date"
+  },
+  {
+   "fieldname": "valid_till",
+   "fieldtype": "Date",
+   "label": "Valid Till"
+  },
+  {
    "fieldname": "external_invoice_no",
    "fieldtype": "Data",
    "label": "External Invoice No"
+  },
+  {
+   "fieldname": "external_order_no",
+   "fieldtype": "Data",
+   "label": "External Order No"
   },
   {
    "fieldname": "column_break_posting",
@@ -168,6 +242,7 @@
   {
    "fieldname": "company_name_arabic",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Company Name Arabic",
    "read_only": 1
   },
@@ -183,12 +258,28 @@
    "label": "Notes"
   },
   {
+   "fieldname": "tc_name",
+   "fieldtype": "Link",
+   "label": "Terms and Conditions",
+   "options": "Terms and Conditions"
+  },
+  {
+   "fieldname": "terms",
+   "fieldtype": "Text Editor",
+   "label": "Terms"
+  },
+  {
+   "fieldname": "print_notes",
+   "fieldtype": "Small Text",
+   "label": "Print Notes"
+  },
+  {
    "fieldname": "party_section",
    "fieldtype": "Section Break",
    "label": "Party"
   },
   {
-   "depends_on": "eval:doc.process_type==='Sales'",
+   "depends_on": "eval:['Sales Quotation','Sales Order','Proforma Invoice','Sales Invoice'].includes(doc.process_type)",
    "fieldname": "customer",
    "fieldtype": "Link",
    "label": "Customer",
@@ -197,26 +288,31 @@
   {
    "fieldname": "document_customer_name_text",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Document Customer Name"
   },
   {
    "fieldname": "document_customer_name_arabic",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Document Customer Name Arabic"
   },
   {
    "fieldname": "document_customer_vat_no",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Document Customer VAT No"
   },
   {
    "fieldname": "document_customer_cr_no",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Document Customer CR No"
   },
   {
    "fieldname": "document_customer_address_text",
    "fieldtype": "Small Text",
+   "hidden": 1,
    "label": "Document Customer Address"
   },
   {
@@ -227,9 +323,11 @@
   {
    "fieldname": "party_name_arabic",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Party Name Arabic"
   },
   {
+   "fetch_from": "supplier.tax_id",
    "fieldname": "party_vat_no",
    "fieldtype": "Data",
    "label": "Party VAT No"
@@ -239,7 +337,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval:doc.process_type==='Purchase'",
+   "depends_on": "eval:['Purchase Invoice','Purchase Order'].includes(doc.process_type)",
    "fieldname": "supplier",
    "fieldtype": "Link",
    "label": "Supplier",
@@ -248,26 +346,31 @@
   {
    "fieldname": "issuer_name_text",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Issuer Name"
   },
   {
    "fieldname": "issuer_name_arabic",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Issuer Name Arabic"
   },
   {
    "fieldname": "issuer_vat_no",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Issuer VAT No"
   },
   {
    "fieldname": "issuer_cr_no",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Issuer CR No"
   },
   {
    "fieldname": "issuer_address_text",
    "fieldtype": "Small Text",
+   "hidden": 1,
    "label": "Issuer Address"
   },
   {
@@ -281,19 +384,86 @@
    "label": "Party Address"
   },
   {
-   "default": "0",
+   "default": "1",
    "fieldname": "create_party_if_missing",
    "fieldtype": "Check",
    "label": "Create Party If Missing"
   },
   {
+   "fieldname": "project_service_section",
+   "fieldtype": "Section Break",
+   "label": "Project / Service"
+  },
+  {
+   "fieldname": "business_vertical",
+   "fieldtype": "Select",
+   "label": "Business Vertical",
+   "options": "Construction\nLogistics\nMaintenance\nLabour Supply\nMachinery\nInspection\nThird Party Service\nOther"
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "fieldname": "column_break_project_service",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "site_location",
+   "fieldtype": "Data",
+   "label": "Site Location"
+  },
+  {
+   "fieldname": "contract_no",
+   "fieldtype": "Data",
+   "label": "Contract No"
+  },
+  {
+   "fieldname": "work_period_from",
+   "fieldtype": "Date",
+   "label": "Work Period From"
+  },
+  {
+   "fieldname": "work_period_to",
+   "fieldtype": "Date",
+   "label": "Work Period To"
+  },
+  {
+   "fieldname": "billing_basis",
+   "fieldtype": "Select",
+   "label": "Billing Basis",
+   "options": "Fixed\nMilestone\nTimesheet\nQuantity\nMixed"
+  },
+  {
+   "fieldname": "linked_sales_order",
+   "fieldtype": "Link",
+   "label": "Linked Sales Order",
+   "options": "Sales Order"
+  },
+  {
+   "fieldname": "linked_purchase_order",
+   "fieldtype": "Link",
+   "label": "Linked Purchase Order",
+   "options": "Purchase Order"
+  },
+  {
    "fieldname": "helpers_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "User / Company Helpers"
   },
   {
    "fieldname": "company_user",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Company User",
    "options": "User"
   },
@@ -301,13 +471,14 @@
    "fetch_from": "company_user.full_name",
    "fieldname": "company_user_full_name",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Company User Full Name",
    "read_only": 1
   },
   {
    "fieldname": "amounts_section",
    "fieldtype": "Section Break",
-   "label": "Amounts"
+   "label": "Totals"
   },
   {
    "fieldname": "net_total",
@@ -333,6 +504,18 @@
   },
   {
    "default": "0",
+   "fieldname": "discount_amount",
+   "fieldtype": "Currency",
+   "label": "Discount Amount"
+  },
+  {
+   "default": "0",
+   "fieldname": "airfreight_charges",
+   "fieldtype": "Currency",
+   "label": "Airfreight Charges"
+  },
+  {
+   "default": "0",
    "fieldname": "rounding_adjustment",
    "fieldtype": "Currency",
    "label": "Rounding Adjustment"
@@ -340,6 +523,7 @@
   {
    "fieldname": "difference_amount",
    "fieldtype": "Currency",
+   "hidden": 1,
    "label": "Difference Amount",
    "read_only": 1
   },
@@ -362,15 +546,56 @@
    "options": "VAT Process Item"
   },
   {
+   "fieldname": "terms_notes_section",
+   "fieldtype": "Section Break",
+   "label": "Terms and Notes"
+  },
+  {
    "fieldname": "created_document_section",
    "fieldtype": "Section Break",
-   "label": "Created ERPNext Document"
+   "label": "Created Document"
+  },
+  {
+   "fieldname": "column_break_terms_notes",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "created_document_type",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Created Document Type",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sales_taxes_template",
+   "fieldtype": "Link",
+   "label": "Sales Taxes Template",
+   "options": "Sales Taxes and Charges Template"
+  },
+  {
+   "fieldname": "purchase_taxes_template",
+   "fieldtype": "Link",
+   "label": "Purchase Taxes Template",
+   "options": "Purchase Taxes and Charges Template"
+  },
+  {
+   "fieldname": "sales_vat_account",
+   "fieldtype": "Link",
+   "label": "Sales VAT Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "purchase_vat_account",
+   "fieldtype": "Link",
+   "label": "Purchase VAT Account",
+   "options": "Account"
   },
   {
    "fieldname": "created_invoice_type",
-   "fieldtype": "Select",
+   "fieldtype": "Data",
+   "hidden": 1,
    "label": "Created Invoice Type",
-   "options": "\nSales Invoice\nPurchase Invoice",
    "read_only": 1
   },
   {
@@ -388,18 +613,54 @@
    "read_only": 1
   },
   {
+   "fieldname": "created_purchase_order",
+   "fieldtype": "Link",
+   "label": "Created Purchase Order",
+   "options": "Purchase Order",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_quotation",
+   "fieldtype": "Link",
+   "label": "Created Quotation",
+   "options": "Quotation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_doctype",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Created Doctype",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_document",
+   "fieldtype": "Dynamic Link",
+   "label": "Created Document",
+   "options": "created_document_type"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_proforma",
+   "fieldtype": "Check",
+   "label": "Is Proforma",
+   "read_only": 1
+  },
+  {
    "fieldname": "column_break_created",
    "fieldtype": "Column Break"
   },
   {
    "fieldname": "invoice_created_on",
    "fieldtype": "Datetime",
+   "hidden": 1,
    "label": "Invoice Created On",
    "read_only": 1
   },
   {
    "fieldname": "invoice_created_by",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Invoice Created By",
    "options": "User",
    "read_only": 1
@@ -411,16 +672,47 @@
   },
   {
    "default": "Draft",
-   "fieldname": "status",
+   "fieldname": "review_status",
    "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "Status",
-   "options": "Draft\nExtracted\nNeeds Review\nReviewed\nInvoice Created\nRejected\nCancelled"
+   "label": "Review Status",
+   "options": "Draft\nReady\nDocument Created\nCancelled\nRejected"
+  },
+  {
+   "default": "Pending",
+   "fieldname": "setup_status",
+   "fieldtype": "Select",
+   "label": "Setup Status",
+   "options": "Pending\nExisting\nCreated\nFailed",
+   "read_only": 1
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Legacy Status",
+   "options": "Draft\nReady\nDocument Created\nCancelled\nRejected"
   },
   {
    "fieldname": "rejection_reason",
    "fieldtype": "Small Text",
+   "hidden": 1,
    "label": "Rejection Reason"
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_create_vat_account",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Auto Create VAT Account"
+  },
+  {
+   "fieldname": "vat_account_type",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "VAT Account Type",
+   "options": "Sales VAT\nPurchase VAT"
   },
   {
    "fieldname": "amended_from",
@@ -437,7 +729,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-26 16:39:49.042505",
+ "modified": "2026-05-10 21:11:43.016079",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "VAT Process",

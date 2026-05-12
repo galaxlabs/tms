@@ -7,9 +7,12 @@
  "engine": "InnoDB",
  "field_order": [
   "item_text",
+  "description",
   "item_code",
   "item_name",
-  "column_break_mwmn",
+  "calculation_type",
+  "lump_sum_amount",
+  "column_break_main",
   "item_group",
   "qty",
   "uom",
@@ -19,6 +22,10 @@
   "vat_rate",
   "vat_amount",
   "total_amount",
+  "income_account",
+  "expense_account",
+  "cost_center",
+  "project",
   "create_item_if_missing",
   "is_service_item",
   "confidence_score"
@@ -31,6 +38,11 @@
    "label": "Item Text"
   },
   {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
    "fieldname": "item_code",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -38,18 +50,33 @@
    "options": "Item"
   },
   {
-   "fieldname": "column_break_mwmn",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "item_name",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Item Name"
+  },
+  {
+   "default": "Qty x Rate",
+   "fieldname": "calculation_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Calculation Type",
+   "options": "Qty x Rate\nLump Sum Amount"
+  },
+  {
+   "fieldname": "lump_sum_amount",
+   "fieldtype": "Currency",
+   "label": "Lump Sum Amount"
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
   },
   {
    "default": "Services",
    "fieldname": "item_group",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Item Group",
    "options": "Item Group"
   },
@@ -61,7 +88,6 @@
    "label": "Qty"
   },
   {
-   "default": "Nos",
    "fieldname": "uom",
    "fieldtype": "Link",
    "label": "UOM",
@@ -76,6 +102,7 @@
   {
    "fieldname": "amount",
    "fieldtype": "Currency",
+   "in_list_view": 1,
    "label": "Amount",
    "read_only": 1
   },
@@ -92,6 +119,7 @@
   {
    "fieldname": "vat_amount",
    "fieldtype": "Currency",
+   "in_list_view": 1,
    "label": "VAT Amount",
    "read_only": 1
   },
@@ -103,6 +131,30 @@
    "read_only": 1
   },
   {
+   "fieldname": "income_account",
+   "fieldtype": "Link",
+   "label": "Income Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "expense_account",
+   "fieldtype": "Link",
+   "label": "Expense Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project"
+  },
+  {
    "default": "1",
    "fieldname": "create_item_if_missing",
    "fieldtype": "Check",
@@ -112,12 +164,14 @@
    "default": "1",
    "fieldname": "is_service_item",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Is Service Item",
    "read_only": 1
   },
   {
    "fieldname": "confidence_score",
    "fieldtype": "Percent",
+   "hidden": 1,
    "label": "Confidence Score"
   }
  ],

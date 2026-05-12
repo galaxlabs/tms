@@ -5,89 +5,52 @@
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
- "field_order": [
-  "is_auto_filled",
-  "section_break_vrxh",
-  "passenger_name",
-  "nationality",
-  "passenger_master",
-  "document_type",
-  "column_break_ixjn",
-  "document_number",
-  "contact_no",
-  "source",
-  "expiry_date"
- ],
+    "field_order": [
+        "passenger_name",
+        "mobile_no",
+        "id_no",
+        "is_invoice_customer",
+        "customer",
+        "notes"
+    ],
  "fields": [
-  {
-   "fetch_from": "passenger_master.full_name",
-   "fieldname": "passenger_name",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Passenger Name"
-  },
-  {
-   "fetch_from": "passenger_master.nationality",
-   "fieldname": "nationality",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Nationality"
-  },
-  {
-   "fetch_from": "passenger_master.contact_no",
-   "fieldname": "contact_no",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Contact No"
-  },
-  {
-   "fieldname": "passenger_master",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Passenger Master",
-   "options": "Passenger Master"
-  },
-  {
-   "fetch_from": "passenger_master.document_type",
-   "fieldname": "document_type",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Document Type",
-   "options": "Passport\nAqama\nNusuk\nVisa\nOther"
-  },
-  {
-   "fieldname": "source",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Source",
-   "options": "BOOKING\nOCR\nMANUAL"
-  },
-  {
-   "fieldname": "column_break_ixjn",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "0",
-   "fieldname": "is_auto_filled",
-   "fieldtype": "Check",
-   "label": "Is Auto Filled"
-  },
-  {
-   "fieldname": "section_break_vrxh",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "expiry_date",
-   "fieldtype": "Date",
-   "label": "Expiry Date"
-  },
-  {
-   "fetch_from": "passenger_master.document_number",
-   "fieldname": "document_number",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "ID/Passport No"
-  }
+        {
+            "fieldname": "passenger_name",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "Passenger Name"
+        },
+        {
+            "fieldname": "mobile_no",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "Mobile No"
+        },
+        {
+            "fieldname": "id_no",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "ID No"
+        },
+        {
+            "default": "0",
+            "fieldname": "is_invoice_customer",
+            "fieldtype": "Check",
+            "in_list_view": 1,
+            "label": "Is Invoice Customer"
+        },
+        {
+            "fieldname": "customer",
+            "fieldtype": "Link",
+            "in_list_view": 1,
+            "label": "Customer",
+            "options": "Customer"
+        },
+        {
+            "fieldname": "notes",
+            "fieldtype": "Small Text",
+            "label": "Notes"
+        }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
