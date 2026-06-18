@@ -8,6 +8,7 @@ frappe.ui.form.on("VAT Process", {
 		toggle_form_fields(frm);
 		hide_internal_fields(frm);
 		renderUploadPanel(frm);
+		syncCreatedDocumentLinkState(frm);
 		add_grouped_buttons(frm);
 	},
 
@@ -117,7 +118,8 @@ function add_grouped_buttons(frm) {
 
 	const targetDoctype = getTargetDoctype(frm.doc.process_type);
 	const reviewStatus = frm.doc.review_status || frm.doc.status;
-	const canCreate = SUPPORTED_CREATE_TYPES.includes(frm.doc.process_type) && !has_created_document(frm.doc);
+	const hasCreated = has_created_document(frm.doc);
+	const canCreate = SUPPORTED_CREATE_TYPES.includes(frm.doc.process_type) && !hasCreated;
 
 	if (frm.doc.process_type === "Purchase Invoice") {
 		frm.add_custom_button(__("Upload Source Document"), () => openVatProcessUploader(frm), __("Actions"));
@@ -176,6 +178,19 @@ function add_grouped_buttons(frm) {
 		}, __("Create"));
 	}
 
+	if (hasCreated && ["Ready", "Reviewed", "Document Created"].includes(reviewStatus)) {
+		frm.add_custom_button(__("Update Created Document"), () => {
+			callVatProcessMethod(frm, "update_created_document", __("Created document updated"), ({ message }) => {
+				if (message?.doctype && message?.name) {
+					frappe.show_alert({
+						message: __("Updated {0} {1}", [message.doctype, message.name]),
+						indicator: "green",
+					});
+				}
+			});
+		}, __("Create"));
+	}
+
 	if (frm.doc.created_document_type && frm.doc.created_document) {
 		frm.add_custom_button(__("Open Created Document"), () => {
 			frappe.set_route("Form", frm.doc.created_document_type, frm.doc.created_document);
@@ -202,6 +217,23 @@ function callVatProcessMethod(frm, method, successMessage, onSuccess) {
 		}
 		frm.reload_doc();
 	});
+}
+
+function syncCreatedDocumentLinkState(frm) {
+	if (frm.is_new() || !has_created_document(frm.doc) || frm.__syncingCreatedDocumentState) {
+		return;
+	}
+
+	frm.__syncingCreatedDocumentState = true;
+	frm.call("refresh_created_document_link_state")
+		.then((r) => {
+			if (r.message?.changed) {
+				frm.reload_doc();
+			}
+		})
+		.finally(() => {
+			frm.__syncingCreatedDocumentState = false;
+		});
 }
 
 function has_created_document(doc) {

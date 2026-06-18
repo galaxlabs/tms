@@ -2,15 +2,15 @@
  "actions": [],
  "allow_guest_to_view": 1,
  "allow_rename": 1,
- "autoname": "format:{driver}-{DD}-{MM}-{YY}{####}",
- "creation": "2025-09-02 23:36:30.139339",
+ "autoname": "format:CELTCO-{YYYY}-{MM}-{####}",
+ "creation": "2026-05-13 12:04:30.659941",
  "default_view": "List",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-        "kashf_sent",
-        "trip_invoice_created",
-        "trip_invoice",
+  "kashf_sent",
+  "trip_invoice_created",
+  "trip_invoice",
   "column_break_eufa",
   "is_return_trip",
   "section_break_dvfs",
@@ -20,12 +20,15 @@
   "to_location",
   "departure",
   "distance",
-        "trip_value",
-        "billing_mode",
-        "vat_mode",
-        "vat_rate",
-        "invoice_passenger_name",
-        "invoice_passenger_mobile",
+  "trip_value",
+  "driver_commission_rate",
+  "driver_commission_amount",
+  "driver_commission_status",
+  "billing_mode",
+  "vat_mode",
+  "vat_rate",
+  "invoice_passenger_name",
+  "invoice_passenger_mobile",
   "driver_share",
   "trip_status",
   "mobile_no",
@@ -84,47 +87,67 @@
    "fieldtype": "Datetime",
    "label": "Departure"
   },
-        {
-            "fetch_from": "trip_route.distance",
-            "fieldname": "distance",
-            "fieldtype": "Float",
-            "label": "Distance"
-        },
-        {
-            "fieldname": "trip_value",
-            "fieldtype": "Currency",
-            "label": "Trip Value"
-        },
-        {
-            "default": "Route Amount",
-            "fieldname": "billing_mode",
-            "fieldtype": "Select",
-            "label": "Billing Mode",
-            "options": "Route Amount\nKM Based\nManual"
-        },
-        {
-            "default": "Included",
-            "fieldname": "vat_mode",
-            "fieldtype": "Select",
-            "label": "VAT Mode",
-            "options": "Included\nManual Add VAT\nNo VAT"
-        },
-        {
-            "default": "15",
-            "fieldname": "vat_rate",
-            "fieldtype": "Percent",
-            "label": "VAT Rate"
-        },
-        {
-            "fieldname": "invoice_passenger_name",
-            "fieldtype": "Data",
-            "label": "Invoice Passenger Name"
-        },
-        {
-            "fieldname": "invoice_passenger_mobile",
-            "fieldtype": "Data",
-            "label": "Invoice Passenger Mobile"
-        },
+  {
+   "fetch_from": "trip_route.distance",
+   "fieldname": "distance",
+   "fieldtype": "Float",
+   "label": "Distance"
+  },
+  {
+   "fieldname": "trip_value",
+   "fieldtype": "Currency",
+   "label": "Trip Value"
+  },
+  {
+   "fetch_from": "trip_route.driver_commission_rate",
+   "fieldname": "driver_commission_rate",
+   "fieldtype": "Percent",
+   "label": "Driver Commission Rate"
+  },
+  {
+   "fieldname": "driver_commission_amount",
+   "fieldtype": "Currency",
+   "label": "Driver Commission Amount",
+   "read_only": 1
+  },
+  {
+   "default": "Unposted",
+   "fieldname": "driver_commission_status",
+   "fieldtype": "Select",
+   "label": "Driver Commission Status",
+   "options": "Unposted\nPosted\nPaid"
+  },
+  {
+   "default": "Route Amount",
+   "fieldname": "billing_mode",
+   "fieldtype": "Select",
+   "label": "Billing Mode",
+   "options": "Route Amount\nKM Based\nManual"
+  },
+  {
+   "default": "Included",
+   "fieldname": "vat_mode",
+   "fieldtype": "Select",
+   "label": "VAT Mode",
+   "options": "Included\nExcluded"
+  },
+  {
+   "default": "15",
+   "fieldname": "vat_rate",
+   "fieldtype": "Percent",
+   "label": "VAT Rate",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_passenger_name",
+   "fieldtype": "Data",
+   "label": "Invoice Passenger Name"
+  },
+  {
+   "fieldname": "invoice_passenger_mobile",
+   "fieldtype": "Data",
+   "label": "Invoice Passenger Mobile"
+  },
   {
    "fieldname": "driver_share",
    "fieldtype": "Currency",
@@ -250,27 +273,26 @@
    "hidden": 1,
    "label": "Mobile No"
   },
-        {
-            "default": "0",
-            "fieldname": "kashf_sent",
-            "fieldtype": "Check",
-            "label": "Kashf Sent?",
-            "search_index": 1
-        },
-        {
-            "default": "0",
-            "fieldname": "trip_invoice_created",
-            "fieldtype": "Check",
-            "label": "Trip Invoice Created",
-            "read_only": 1
-        },
-        {
-            "fieldname": "trip_invoice",
-            "fieldtype": "Link",
-            "label": "Trip Invoice",
-            "options": "Trip Invoice",
-            "read_only": 1
-        },
+  {
+   "default": "0",
+   "fieldname": "kashf_sent",
+   "fieldtype": "Check",
+   "label": "Kashf Sent?",
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "trip_invoice_created",
+   "fieldtype": "Check",
+   "label": "Trip Invoice Created",
+   "read_only": 1
+  },
+  {
+   "fieldname": "trip_invoice",
+   "fieldtype": "Link",
+   "label": "Trip Invoice",
+   "options": "Trip Invoice"
+  },
   {
    "fieldname": "section_break_dvfs",
    "fieldtype": "Section Break"
@@ -299,17 +321,17 @@
    "fieldtype": "Check",
    "label": "Is Return Trip"
   },
-        {
-            "fieldname": "arrived_at",
-            "fieldtype": "Datetime",
-            "label": "Arrived At"
-        }
+  {
+   "fieldname": "arrived_at",
+   "fieldtype": "Datetime",
+   "label": "Arrived At"
+  }
  ],
  "grid_page_length": 50,
  "has_web_view": 1,
  "image_field": "qr_code",
  "links": [],
- "modified": "2026-02-10 19:01:28.368717",
+ "modified": "2026-05-13 17:24:53.510920",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "Trip",
@@ -335,7 +357,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Guest",
+   "role": "Driver",
    "share": 1,
    "write": 1
   }

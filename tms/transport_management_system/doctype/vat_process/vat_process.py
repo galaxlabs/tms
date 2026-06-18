@@ -11,6 +11,11 @@ from frappe.model.naming import make_autoname
 from frappe.model.document import Document
 from frappe.utils import cint, cstr, flt, getdate, now_datetime, today
 from frappe.utils.file_manager import save_file
+from tms.utils.party_defaults import (
+	get_valid_default_customer_group,
+	get_valid_default_supplier_group,
+	get_valid_default_territory,
+)
 from tms.utils.gemini_extract import extract_vat_invoice_with_gemini
 from tms.utils.ocr_manager import OCRManager
 
@@ -224,9 +229,25 @@ class VATProcess(Document):
 	def create_erpnext_document(self):
 		return _create_erpnext_document_for_doc(self)
 
+	@frappe.whitelist()
+	def update_created_document(self):
+		return _update_created_document_for_doc(self)
+
+	@frappe.whitelist()
+	def refresh_created_document_link_state(self):
+		changed = self._sync_created_document_link_state(persist=True)
+		return {
+			"changed": changed,
+			"created_document_type": self.created_document_type,
+			"created_document": self.created_document,
+			"status": self.status,
+			"review_status": self.review_status,
+		}
+
 	def validate(self):
 		self._clean_text_fields()
 		self._normalize_legacy_values()
+		self._sync_created_document_link_state()
 		self._populate_terms_from_template()
 		self.apply_scan_defaults()
 		self.validate_required_fields()
@@ -239,6 +260,7 @@ class VATProcess(Document):
 
 	def before_submit(self):
 		self._normalize_legacy_values()
+		self._sync_created_document_link_state()
 		self._populate_terms_from_template()
 		self.apply_scan_defaults()
 		self.validate_required_fields()
@@ -359,6 +381,7 @@ class VATProcess(Document):
 			)
 
 	def validate_invoice_creation_allowed(self):
+		self._sync_created_document_link_state()
 		review_status = self.review_status or self.status
 		if review_status not in {"Ready", "Reviewed"}:
 			frappe.throw(_("A document can only be created when the VAT Process status is Ready."))
@@ -375,6 +398,28 @@ class VATProcess(Document):
 			frappe.throw(_("Customer or party details are required before creating this document."))
 		if target_doctype in {"Purchase Order", "Purchase Invoice"} and not self.supplier and not (self.party_name_text or self.party_vat_no):
 			frappe.throw(_("Supplier or party details are required before creating this document."))
+
+	def validate_existing_document_update_allowed(self, existing_document):
+		review_status = self.review_status or self.status
+		if review_status not in {"Ready", "Reviewed", "Document Created"}:
+			frappe.throw(_("A created ERPNext document can only be updated when the VAT Process status is Ready or Document Created."))
+		if not existing_document:
+			frappe.throw(_("No linked ERPNext document was found to update."))
+		if cint(getattr(existing_document, "docstatus", 0)) != 0:
+			frappe.throw(_("Only draft ERPNext documents can be updated from VAT Process."))
+		if self.process_type not in SUPPORTED_CREATE_PROCESS_TYPES:
+			frappe.throw(_("Process Type is required before updating a document."))
+		if not self.company:
+			frappe.throw(_("Company is required before updating a document."))
+		if not self.items:
+			frappe.throw(_("At least one item row is required before updating the ERPNext document."))
+		target_doctype = get_target_doctype(self)
+		if cstr(existing_document.doctype) != cstr(target_doctype):
+			frappe.throw(_("Linked document type {0} does not match VAT Process target {1}.").format(existing_document.doctype, target_doctype))
+		if target_doctype in {"Quotation", "Sales Order", "Sales Invoice"} and not self.customer and not (self.party_name_text or self.party_vat_no):
+			frappe.throw(_("Customer or party details are required before updating this document."))
+		if target_doctype in {"Purchase Order", "Purchase Invoice"} and not self.supplier and not (self.party_name_text or self.party_vat_no):
+			frappe.throw(_("Supplier or party details are required before updating this document."))
 
 	def create_missing_items(self):
 		for row in self.items:
@@ -737,18 +782,18 @@ class VATProcess(Document):
 		if not party_label:
 			return None
 
-		group_doctype, fallback_group = PARTY_GROUP_DEFAULTS[party_doctype]
-		group_value = frappe.db.get_value(group_doctype, {}, "name") or fallback_group
 		doc_payload = {
 			"doctype": party_doctype,
 			"supplier_name" if party_doctype == "Supplier" else "customer_name": party_label,
 		}
 		if party_doctype == "Supplier":
-			doc_payload["supplier_group"] = group_value
+			doc_payload["supplier_group"] = get_valid_default_supplier_group()
 		else:
-			doc_payload["customer_group"] = group_value
+			doc_payload["customer_group"] = get_valid_default_customer_group()
 			if _has_field(party_doctype, "customer_type"):
 				doc_payload["customer_type"] = "Company"
+			if _has_db_field(party_doctype, "territory"):
+				doc_payload["territory"] = get_valid_default_territory()
 		for vat_field in ("tax_id", "custom_vat_information"):
 			if _has_db_field(party_doctype, vat_field) and self.party_vat_no:
 				doc_payload[vat_field] = self.party_vat_no
@@ -1019,6 +1064,210 @@ class VATProcess(Document):
 			else:
 				document.set(fieldname, flt(self.airfreight_charges))
 
+	def _get_created_document_reference(self):
+		references = []
+		if self.created_document_type and self.created_document:
+			references.append((self.created_document_type, self.created_document))
+		for doctype, fieldname in (
+			("Sales Invoice", "created_sales_invoice"),
+			("Purchase Invoice", "created_purchase_invoice"),
+			("Purchase Order", "created_purchase_order"),
+			("Quotation", "created_quotation"),
+		):
+			value = self.get(fieldname)
+			if value:
+				references.append((doctype, value))
+
+		seen = set()
+		for doctype, name in references:
+			key = (cstr(doctype), cstr(name))
+			if key in seen or not doctype or not name:
+				continue
+			seen.add(key)
+			return doctype, name
+		return None, None
+
+	def _clear_created_document_links(self):
+		for fieldname in (
+			"created_doctype",
+			"created_document_type",
+			"created_document",
+			"created_invoice_type",
+			"created_sales_invoice",
+			"created_purchase_invoice",
+			"created_purchase_order",
+			"created_quotation",
+			"invoice_created_on",
+			"invoice_created_by",
+		):
+			self.set(fieldname, None if fieldname in {"invoice_created_on", "invoice_created_by"} else "")
+
+	def _sync_created_document_link_state(self, persist=False):
+		created_doctype, created_name = self._get_created_document_reference()
+		changed = False
+
+		if not created_doctype or not created_name:
+			return False
+
+		if not frappe.db.exists(created_doctype, created_name):
+			self._clear_created_document_links()
+			if (self.review_status or self.status) == "Document Created":
+				self.status = "Ready"
+				self.review_status = "Ready"
+			changed = True
+		else:
+			canonical = (
+				cstr(self.created_document_type) != cstr(created_doctype)
+				or cstr(self.created_document) != cstr(created_name)
+				or (created_doctype == "Sales Invoice" and cstr(self.created_sales_invoice) != cstr(created_name))
+				or (created_doctype == "Purchase Invoice" and cstr(self.created_purchase_invoice) != cstr(created_name))
+				or (created_doctype == "Purchase Order" and cstr(self.created_purchase_order) != cstr(created_name))
+				or (created_doctype == "Quotation" and cstr(self.created_quotation) != cstr(created_name))
+			)
+			if canonical:
+				self._set_created_document(frappe._dict(doctype=created_doctype, name=created_name))
+				changed = True
+
+		if persist and changed:
+			self.flags.skip_totals_validation_reset = True
+			self.save(ignore_permissions=True)
+
+		return changed
+
+	def _reset_document_for_sync(self, document):
+		if _has_field(document.doctype, "taxes_and_charges"):
+			document.taxes_and_charges = None
+		if hasattr(document, "set"):
+			document.set("items", [])
+			document.set("taxes", [])
+
+	def update_sales_invoice(self, invoice):
+		invoice.company = self.company
+		invoice.customer = self.customer
+		invoice.posting_date = self.posting_date
+		if _has_field("Sales Invoice", "due_date"):
+			invoice.due_date = self.posting_date
+		if _has_field("Sales Invoice", "currency") and self.currency:
+			invoice.currency = self.currency
+		self._set_vat_process_reference(invoice)
+		self._apply_header_dimensions(invoice)
+		self._apply_external_references(invoice)
+		self._reset_document_for_sync(invoice)
+		manual_tax_template = self._set_default_tax_template(invoice, self.customer, "Customer", "sales_taxes_and_charges_template")
+		self._append_document_items(invoice)
+		if hasattr(invoice, "set_missing_values"):
+			invoice.set_missing_values()
+		self._apply_manual_template_taxes(invoice, manual_tax_template)
+		if hasattr(invoice, "calculate_taxes_and_totals"):
+			invoice.calculate_taxes_and_totals()
+		self._apply_terms_and_notes(invoice)
+		invoice.save(ignore_permissions=True)
+		return invoice
+
+	def update_sales_order(self, document, is_proforma=False):
+		document.company = self.company
+		document.customer = self.customer
+		document.transaction_date = self.posting_date
+		if _has_field("Sales Order", "delivery_date"):
+			document.delivery_date = self.required_by_date or self.posting_date
+		if _has_field("Sales Order", "currency") and self.currency:
+			document.currency = self.currency
+		if is_proforma and _has_field("Sales Order", "custom_is_proforma"):
+			document.custom_is_proforma = 1
+		self._set_vat_process_reference(document)
+		self._apply_header_dimensions(document)
+		self._apply_external_references(document)
+		self._reset_document_for_sync(document)
+		manual_tax_template = self._set_default_tax_template(document, self.customer, "Customer", "sales_taxes_and_charges_template")
+		self._append_document_items(document)
+		if hasattr(document, "set_missing_values"):
+			document.set_missing_values()
+		self._apply_manual_template_taxes(document, manual_tax_template)
+		if hasattr(document, "calculate_taxes_and_totals"):
+			document.calculate_taxes_and_totals()
+		self._apply_terms_and_notes(document)
+		document.save(ignore_permissions=True)
+		return document
+
+	def update_purchase_invoice(self, invoice):
+		invoice.company = self.company
+		invoice.supplier = self.supplier
+		invoice.posting_date = self.posting_date
+		if _has_field("Purchase Invoice", "currency") and self.currency:
+			invoice.currency = self.currency
+		for fieldname in ("supplier_invoice_no", "bill_no"):
+			if _has_field("Purchase Invoice", fieldname):
+				invoice.set(fieldname, self.external_invoice_no or "")
+		if _has_field("Purchase Invoice", "bill_date"):
+			invoice.bill_date = self.invoice_date or self.posting_date
+		self._set_vat_process_reference(invoice)
+		self._apply_header_dimensions(invoice)
+		self._apply_external_references(invoice)
+		self._reset_document_for_sync(invoice)
+		manual_tax_template = self._set_default_tax_template(invoice, self.supplier, "Supplier", "purchase_taxes_and_charges_template")
+		self._append_document_items(invoice)
+		if hasattr(invoice, "set_missing_values"):
+			invoice.set_missing_values()
+		self._apply_manual_template_taxes(invoice, manual_tax_template)
+		if hasattr(invoice, "calculate_taxes_and_totals"):
+			invoice.calculate_taxes_and_totals()
+		self._apply_terms_and_notes(invoice)
+		invoice.save(ignore_permissions=True)
+		return invoice
+
+	def update_purchase_order(self, document):
+		document.company = self.company
+		document.supplier = self.supplier
+		document.transaction_date = self.posting_date
+		if _has_field("Purchase Order", "schedule_date"):
+			document.schedule_date = self.required_by_date or self.posting_date
+		if _has_field("Purchase Order", "currency") and self.currency:
+			document.currency = self.currency
+		self._populate_terms_from_template()
+		self._set_vat_process_reference(document)
+		self._apply_header_dimensions(document)
+		self._apply_external_references(document)
+		self._reset_document_for_sync(document)
+		manual_tax_template = self._set_default_tax_template(document, self.supplier, "Supplier", "purchase_taxes_and_charges_template")
+		self._apply_vat_process_totals_to_document(document)
+		self._append_document_items(document)
+		if hasattr(document, "set_missing_values"):
+			document.set_missing_values()
+		self._apply_manual_template_taxes(document, manual_tax_template)
+		if hasattr(document, "calculate_taxes_and_totals"):
+			document.calculate_taxes_and_totals()
+		self._apply_terms_and_notes(document)
+		document.save(ignore_permissions=True)
+		return document
+
+	def update_quotation(self, document):
+		if _has_field("Quotation", "quotation_to"):
+			document.quotation_to = "Customer"
+		if _has_field("Quotation", "party_name"):
+			document.party_name = self.customer
+		document.company = self.company
+		document.transaction_date = self.posting_date
+		if _has_field("Quotation", "valid_till"):
+			document.valid_till = self.valid_till or self.posting_date
+		if _has_field("Quotation", "order_type"):
+			document.order_type = "Sales"
+		if _has_field("Quotation", "currency") and self.currency:
+			document.currency = self.currency
+		self._set_vat_process_reference(document)
+		self._apply_header_dimensions(document)
+		self._apply_external_references(document)
+		self._reset_document_for_sync(document)
+		manual_tax_template = self._set_default_tax_template(document, self.customer, "Customer", "sales_taxes_and_charges_template")
+		self._append_document_items(document)
+		if hasattr(document, "set_missing_values"):
+			document.set_missing_values()
+		self._apply_manual_template_taxes(document, manual_tax_template)
+		if hasattr(document, "calculate_taxes_and_totals"):
+			document.calculate_taxes_and_totals()
+		self._apply_terms_and_notes(document)
+		document.save(ignore_permissions=True)
+		return document
+
 	def _validate_party_link_for_document(self):
 		party_doctype, party_field = self._get_party_context()
 		if not party_field:
@@ -1276,8 +1525,11 @@ class VATProcess(Document):
 			)
 
 
-def validate_before_create(doc, target_doctype):
-	doc.validate_invoice_creation_allowed()
+def validate_before_create(doc, target_doctype, existing_document=None):
+	if existing_document:
+		doc.validate_existing_document_update_allowed(existing_document)
+	else:
+		doc.validate_invoice_creation_allowed()
 	doc.ensure_party_link(allow_create=bool(doc.create_party_if_missing))
 	doc._validate_party_link_for_document()
 	doc.create_missing_items()
@@ -1291,6 +1543,8 @@ def validate_before_create(doc, target_doctype):
 		if not _strip_text(doc.external_invoice_no):
 			frappe.throw(_("External Invoice No is required before creating a Purchase Invoice."))
 		duplicate_filters = {"company": doc.company, "supplier": doc.supplier, "docstatus": ["<", 2]}
+		if existing_document and getattr(existing_document, "name", None):
+			duplicate_filters["name"] = ["!=", existing_document.name]
 		for fieldname in ("bill_no", "supplier_invoice_no"):
 			if _has_db_field("Purchase Invoice", fieldname):
 				duplicate_filters[fieldname] = doc.external_invoice_no
@@ -1330,6 +1584,44 @@ def _create_erpnext_document_for_doc(doc):
 
 	return {"doctype": target_doctype, "name": created.name}
 
+
+
+
+
+def _update_created_document_for_doc(doc):
+	doc.apply_scan_defaults(allow_party_creation=True)
+	doc._sync_created_document_link_state()
+	created_doctype, created_name = doc._get_created_document_reference()
+	if not created_doctype or not created_name:
+		frappe.throw(_("No linked ERPNext document exists. Please create a new document first."))
+
+	target_doctype = get_target_doctype(doc)
+	if cstr(created_doctype) != cstr(target_doctype):
+		frappe.throw(_("Linked document type {0} does not match VAT Process target {1}.").format(created_doctype, target_doctype))
+
+	existing_document = frappe.get_doc(created_doctype, created_name)
+	validate_before_create(doc, target_doctype, existing_document=existing_document)
+
+	if target_doctype == "Quotation":
+		updated = doc.update_quotation(existing_document)
+	elif target_doctype == "Sales Order":
+		updated = doc.update_sales_order(existing_document, is_proforma=doc.process_type == "Proforma Invoice")
+	elif target_doctype == "Sales Invoice":
+		updated = doc.update_sales_invoice(existing_document)
+	elif target_doctype == "Purchase Order":
+		updated = doc.update_purchase_order(existing_document)
+	elif target_doctype == "Purchase Invoice":
+		updated = doc.update_purchase_invoice(existing_document)
+	else:
+		frappe.throw(_("Unsupported target doctype: {0}").format(target_doctype))
+
+	doc._set_created_document(updated)
+	doc.status = "Document Created"
+	doc.review_status = "Document Created"
+	doc.flags.skip_totals_validation_reset = True
+	doc.save(ignore_permissions=True)
+
+	return {"doctype": target_doctype, "name": updated.name, "updated": True}
 
 def _setup_vat_accounts_and_templates_for_doc(doc):
 	if "VAT Manager" not in frappe.get_roles() and "System Manager" not in frappe.get_roles():
@@ -1385,6 +1677,20 @@ def create_erpnext_document(name):
 	doc = frappe.get_doc("VAT Process", name)
 	doc.check_permission("write")
 	return _create_erpnext_document_for_doc(doc)
+
+
+@frappe.whitelist()
+def update_created_document(name):
+	doc = frappe.get_doc("VAT Process", name)
+	doc.check_permission("write")
+	return _update_created_document_for_doc(doc)
+
+
+@frappe.whitelist()
+def refresh_created_document_link_state(name):
+	doc = frappe.get_doc("VAT Process", name)
+	doc.check_permission("read")
+	return doc.refresh_created_document_link_state()
 
 
 @frappe.whitelist()
@@ -1482,30 +1788,8 @@ def create_or_match_items(name):
 @frappe.whitelist()
 def sync_created_invoice_for_vat_process(name):
 	doc = frappe.get_doc("VAT Process", name)
-	invoice_name = doc.created_sales_invoice or doc.created_purchase_invoice
-	invoice_doctype = doc.created_invoice_type
-	if not invoice_name or not invoice_doctype:
-		frappe.throw(_("No ERPNext invoice has been created yet for this VAT Process."))
-
-	invoice = frappe.get_doc(invoice_doctype, invoice_name)
-	if invoice.docstatus != 0:
-		frappe.throw(_("Only draft invoices can be re-synced from VAT Process."))
-
-	invoice.taxes_and_charges = None
-	invoice.set("taxes", [])
-	manual_tax_template = doc._set_default_tax_template(
-		invoice,
-		doc.customer if invoice_doctype == "Sales Invoice" else doc.supplier,
-		"Customer" if invoice_doctype == "Sales Invoice" else "Supplier",
-		"sales_taxes_and_charges_template" if invoice_doctype == "Sales Invoice" else "purchase_taxes_and_charges_template",
-	)
-	if hasattr(invoice, "set_missing_values"):
-		invoice.set_missing_values()
-	doc._apply_manual_template_taxes(invoice, manual_tax_template)
-	if hasattr(invoice, "calculate_taxes_and_totals"):
-		invoice.calculate_taxes_and_totals()
-	invoice.save(ignore_permissions=True)
-	return {"doctype": invoice.doctype, "name": invoice.name}
+	doc.check_permission("write")
+	return _update_created_document_for_doc(doc)
 
 
 @frappe.whitelist()
@@ -1845,6 +2129,8 @@ def _get_or_create_demo_customer():
 			"doctype": "Customer",
 			"customer_name": "VAT Process Demo Customer",
 			"customer_type": "Company",
+			"customer_group": get_valid_default_customer_group(),
+			"territory": get_valid_default_territory(),
 		}
 	)
 	doc.insert(ignore_permissions=True)

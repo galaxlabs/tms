@@ -82,5 +82,25 @@ frappe.ui.form.on("Trip Invoice", {
 				__("Invoice Actions")
 			);
 		}
+
+		if (frm.doc.status === "Ready" && !frm.doc.sales_invoice) {
+			frm.add_custom_button(
+				__("Create Sales Invoice"),
+				() => {
+					frappe.call({
+						method:
+							"tms.transport_management_system.doctype.trip_invoice.trip_invoice.create_sales_invoice_from_trip_invoice",
+						args: { name: frm.doc.name },
+						freeze: true,
+						callback(r) {
+							if (r.message && r.message.sales_invoice) {
+								frappe.set_route("Form", "Sales Invoice", r.message.sales_invoice);
+							}
+						},
+					});
+				},
+				__("Invoice Actions")
+			);
+		}
 	},
 });

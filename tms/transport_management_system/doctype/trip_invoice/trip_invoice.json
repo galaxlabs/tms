@@ -1,7 +1,7 @@
 {
  "actions": [],
- "autoname": "format:TINV-{YYYY}-{#####}",
- "creation": "2026-05-12 14:54:47.858719",
+ "autoname": "format:TINV-{YYYY}-{MM}-{####}",
+ "creation": "2026-05-12 15:21:55.900143",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -134,13 +134,14 @@
    "fieldname": "vat_mode",
    "fieldtype": "Select",
    "label": "VAT Mode",
-   "options": "Included\nManual Add VAT\nNo VAT"
+   "options": "Included\nExcluded"
   },
   {
    "default": "15",
    "fieldname": "vat_rate",
    "fieldtype": "Percent",
-   "label": "VAT Rate"
+   "label": "VAT Rate",
+   "read_only": 1
   },
   {
    "fieldname": "vat_template",
@@ -211,8 +212,7 @@
    "fieldname": "sales_invoice",
    "fieldtype": "Link",
    "label": "Sales Invoice",
-   "options": "Sales Invoice",
-   "read_only": 1
+   "options": "Sales Invoice"
   },
   {
    "default": "0",
@@ -251,7 +251,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-12 15:01:44.298801",
+ "modified": "2026-05-13 11:04:12.389545",
  "modified_by": "Administrator",
  "module": "Transport Management System",
  "name": "Trip Invoice",

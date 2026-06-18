@@ -14,6 +14,7 @@ from tms.transport_management_system.api.vat_dashboard import (
 )
 from tms.transport_management_system.doctype.vat_process.vat_process import (
 	VATProcess,
+	_update_created_document_for_doc,
 	attach_existing_file_to_vat_process,
 	create_erpnext_document,
 	create_document_from_vat_process,
@@ -21,7 +22,9 @@ from tms.transport_management_system.doctype.vat_process.vat_process import (
 	get_source_file_url,
 	get_target_doctype,
 	get_vat_process_attachments,
+	update_created_document,
 )
+from tms.utils.party_defaults import get_valid_default_customer_group, get_valid_default_supplier_group, get_valid_default_territory
 
 
 class TestVATProcess(FrappeTestCase):
@@ -562,10 +565,11 @@ class TestVATProcess(FrappeTestCase):
 		self.assertEqual(template_doc.company, doc.company)
 		self.assertEqual(template_doc.title, "KSA VAT 15%")
 
+	@patch.object(VATProcess, "_sync_created_document_link_state", return_value=False)
 	@patch.object(VATProcess, "_validate_links")
 	@patch.object(VATProcess, "create_purchase_order")
 	def test_create_document_from_vat_process_dispatches_purchase_order(
-		self, mock_create_purchase_order, _mock_validate_links
+		self, mock_create_purchase_order, _mock_validate_links, _mock_sync_state
 	):
 		mock_create_purchase_order.return_value = frappe._dict(doctype="Purchase Order", name="PUR-ORD-TEST-0001")
 		doc = frappe.get_doc(
@@ -589,9 +593,10 @@ class TestVATProcess(FrappeTestCase):
 		self.assertEqual(reloaded.created_document, "PUR-ORD-TEST-0001")
 		self.assertEqual(reloaded.status, "Document Created")
 
+	@patch.object(VATProcess, "_sync_created_document_link_state", return_value=False)
 	@patch.object(VATProcess, "_validate_links")
 	@patch.object(VATProcess, "create_quotation")
-	def test_create_document_from_vat_process_dispatches_quotation(self, mock_create_quotation, _mock_validate_links):
+	def test_create_document_from_vat_process_dispatches_quotation(self, mock_create_quotation, _mock_validate_links, _mock_sync_state):
 		mock_create_quotation.return_value = frappe._dict(doctype="Quotation", name="QTN-TEST-0001")
 		doc = frappe.get_doc(
 			{
@@ -615,9 +620,10 @@ class TestVATProcess(FrappeTestCase):
 		self.assertEqual(reloaded.created_document, "QTN-TEST-0001")
 		self.assertEqual(reloaded.status, "Document Created")
 
+	@patch.object(VATProcess, "_sync_created_document_link_state", return_value=False)
 	@patch.object(VATProcess, "_validate_links")
 	@patch.object(VATProcess, "create_sales_order")
-	def test_create_erpnext_document_dispatches_proforma_to_sales_order(self, mock_create_sales_order, _mock_validate_links):
+	def test_create_erpnext_document_dispatches_proforma_to_sales_order(self, mock_create_sales_order, _mock_validate_links, _mock_sync_state):
 		mock_create_sales_order.return_value = frappe._dict(doctype="Sales Order", name="SAL-ORD-TEST-0001")
 		doc = frappe.get_doc(
 			{
@@ -638,6 +644,69 @@ class TestVATProcess(FrappeTestCase):
 		self.assertEqual(result["doctype"], "Sales Order")
 		self.assertEqual(reloaded.created_document_type, "Sales Order")
 		self.assertEqual(reloaded.created_document, "SAL-ORD-TEST-0001")
+		self.assertEqual(reloaded.review_status, "Document Created")
+
+
+	def test_sync_created_document_link_state_clears_missing_document_and_sets_ready(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "VAT Process",
+				"process_type": "Purchase Order",
+				"company": get_test_company(),
+				"posting_date": today(),
+				"supplier": get_test_supplier(),
+				"status": "Document Created",
+				"review_status": "Document Created",
+				"created_document_type": "Purchase Order",
+				"created_document": "PUR-ORD-MISSING-0001",
+				"created_purchase_order": "PUR-ORD-MISSING-0001",
+				"items": [{"item_text": "Service Line", "qty": 1, "rate": 100}],
+			}
+		)
+
+		changed = doc._sync_created_document_link_state()
+
+		self.assertTrue(changed)
+		self.assertEqual(doc.created_document_type, "")
+		self.assertEqual(doc.created_document, "")
+		self.assertEqual(doc.created_purchase_order, "")
+		self.assertEqual(doc.status, "Ready")
+		self.assertEqual(doc.review_status, "Ready")
+
+	def test_update_created_document_dispatches_existing_purchase_order(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "VAT Process",
+				"process_type": "Purchase Order",
+				"company": get_test_company(),
+				"posting_date": today(),
+				"supplier": get_test_supplier(),
+				"status": "Document Created",
+				"review_status": "Document Created",
+				"created_document_type": "Purchase Order",
+				"created_document": "PUR-ORD-TEST-0001",
+				"created_purchase_order": "PUR-ORD-TEST-0001",
+				"items": [{"item_text": "Service Line", "qty": 1, "rate": 100}],
+			}
+		).insert(ignore_permissions=True)
+
+		existing_document = frappe._dict(doctype="Purchase Order", name="PUR-ORD-TEST-0001", docstatus=0)
+		original_get_doc = frappe.get_doc
+
+		with patch.object(VATProcess, "_sync_created_document_link_state", return_value=False), \
+			 patch.object(VATProcess, "_get_created_document_reference", return_value=("Purchase Order", "PUR-ORD-TEST-0001")), \
+			 patch.object(VATProcess, "update_purchase_order", return_value=existing_document) as mock_update_purchase_order, \
+			 patch("tms.transport_management_system.doctype.vat_process.vat_process.validate_before_create") as mock_validate_before_create, \
+			 patch("tms.transport_management_system.doctype.vat_process.vat_process.frappe.get_doc", side_effect=lambda doctype, name=None, *args, **kwargs: existing_document if doctype == "Purchase Order" and name == "PUR-ORD-TEST-0001" else original_get_doc(doctype, name, *args, **kwargs)):
+			result = _update_created_document_for_doc(doc)
+
+		reloaded = frappe.get_doc("VAT Process", doc.name)
+
+		mock_validate_before_create.assert_called_once()
+		mock_update_purchase_order.assert_called_once()
+		self.assertEqual(result["doctype"], "Purchase Order")
+		self.assertTrue(result["updated"])
+		self.assertEqual(reloaded.created_document, "PUR-ORD-TEST-0001")
 		self.assertEqual(reloaded.review_status, "Document Created")
 
 
@@ -670,6 +739,8 @@ def get_test_customer():
 			"doctype": "Customer",
 			"customer_name": "VAT Process Test Customer",
 			"customer_type": "Company",
+			"customer_group": get_valid_default_customer_group(),
+			"territory": get_valid_default_territory(),
 		}
 	)
 	doc.insert(ignore_permissions=True)
@@ -685,7 +756,7 @@ def get_test_supplier():
 		{
 			"doctype": "Supplier",
 			"supplier_name": "VAT Process Test Supplier",
-			"supplier_group": frappe.db.get_value("Supplier Group", {}, "name") or "All Supplier Groups",
+			"supplier_group": get_valid_default_supplier_group(),
 		}
 	)
 	doc.insert(ignore_permissions=True)

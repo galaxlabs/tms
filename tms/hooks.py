@@ -26,11 +26,11 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/tms/css/tms.css"
-# app_include_js = "/assets/tms/js/tms.js"
+app_include_js = "/assets/tms/js/pdf_generator.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/tms/css/tms.css"
-# web_include_js = "/assets/tms/js/tms.js"
+# web_include_js = "/assets/tms/js/pdf_generator.js"
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "tms/public/scss/website"
@@ -352,4 +352,11 @@ doc_events = {
         "on_submit": "tms.utils.pdf_hooks.create_pdf_on_submit"
         }
         
+}
+doctype_js = {
+    "Quotation": "public/js/pdf_generator.js",
+    "Sales Invoice": "public/js/pdf_generator.js",
+    "Sales Order": "public/js/pdf_generator.js",
+    "Delivery Note": "public/js/pdf_generator.js",
+    "Purchase Invoice": "public/js/pdf_generator.js",
 }

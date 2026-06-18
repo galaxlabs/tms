@@ -2,6 +2,10 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.permissions import add_user_permission, remove_user_permission
+from tms.utils.party_defaults import (
+    get_valid_default_customer_group,
+    get_valid_default_territory,
+)
 
 
 class Staff(Document):
@@ -422,8 +426,8 @@ class Staff(Document):
                 return
 
     def set_customer_required_defaults(self, customer):
-        if customer.meta.has_field("customer_group") and not customer.customer_group:
-            customer.customer_group = self.get_default_customer_group()
+        if customer.meta.has_field("customer_group"):
+            customer.customer_group = self.get_default_customer_group(customer.customer_group)
 
         if customer.meta.has_field("territory") and not customer.territory:
             customer.territory = self.get_default_territory()
@@ -441,31 +445,17 @@ class Staff(Document):
 
         return "Saudi Arabia"
 
-    def get_default_customer_group(self):
-        value = frappe.db.get_single_value("Selling Settings", "customer_group")
-        if value:
-            return value
+    def get_default_customer_group(self, current_value=None):
+        return get_valid_default_customer_group(current_value)
 
-        if frappe.db.exists("Customer Group", "Individual"):
-            return "Individual"
+    def is_valid_customer_group(self, customer_group):
+        if not customer_group or not frappe.db.exists("Customer Group", customer_group):
+            return False
 
-        if frappe.db.exists("Customer Group", "All Customer Groups"):
-            return "All Customer Groups"
-
-        return None
+        return not frappe.db.get_value("Customer Group", customer_group, "is_group")
 
     def get_default_territory(self):
-        value = frappe.db.get_single_value("Selling Settings", "territory")
-        if value:
-            return value
-
-        if frappe.db.exists("Territory", "Saudi Arabia"):
-            return "Saudi Arabia"
-
-        if frappe.db.exists("Territory", "All Territories"):
-            return "All Territories"
-
-        return None
+        return get_valid_default_territory()
 
     # ------------------------------------------------------------
     # Staff Rename
@@ -571,6 +561,10 @@ class Staff(Document):
 # import frappe
 # from frappe.model.document import Document
 # from frappe.permissions import add_user_permission, remove_user_permission
+from tms.utils.party_defaults import (
+    get_valid_default_customer_group,
+    get_valid_default_territory,
+)
 
 
 # class Staff(Document):

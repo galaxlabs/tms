@@ -14,6 +14,8 @@
   "column_break_ntsd",
   "has_return",
   "distance",
+  "route_value",
+  "driver_commission_rate",
   "duration",
   "avg_speed_kmph",
   "return_route"
@@ -28,6 +30,17 @@
    "fieldname": "distance",
    "fieldtype": "Float",
    "label": "Distance"
+  },
+  {
+   "fieldname": "route_value",
+   "fieldtype": "Currency",
+   "label": "Route Value"
+  },
+  {
+   "default": "0",
+   "fieldname": "driver_commission_rate",
+   "fieldtype": "Percent",
+   "label": "Driver Commission Rate"
   },
   {
    "fieldname": "column_break_ntsd",

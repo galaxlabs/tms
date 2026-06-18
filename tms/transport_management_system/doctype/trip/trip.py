@@ -7,10 +7,14 @@ import uuid
 import pyqrcode as qrcode
 import re  
 from frappe.website.website_generator import WebsiteGenerator
+from frappe.model.naming import make_autoname
 from frappe.utils import getdate, get_url, add_to_date, flt, cint  # 👈 extend this line
 from hijri_converter import Gregorian
 
 class Trip(WebsiteGenerator):
+    def autoname(self):
+        self.name = make_autoname("CELTCO-.YYYY.-.MM.-.####")
+
     def before_insert(self):
         # UUID
         if not self.uuid:
@@ -38,6 +42,8 @@ class Trip(WebsiteGenerator):
         invoice_customers = [row for row in (self.passengers or []) if cint(row.get("is_invoice_customer"))]
         if len(invoice_customers) > 1:
             frappe.throw("Only one passenger can be selected as invoice customer.")
+
+        self.driver_commission_amount = flt(self.trip_value) * flt(self.driver_commission_rate) / 100
 
         if self.departure and self.duration_minutes:
             self.arrival = add_to_date(self.departure, minutes=int(self.duration_minutes), as_datetime=True)
@@ -167,8 +173,12 @@ class Trip(WebsiteGenerator):
                     if data.get("name"):
                         self.append("passengers", {
                             "passenger_name": data.get("name"),
-                            "id_no": data.get("id_no", ""),
-                            "mobile_no": data.get("mobile_no", "")
+                            "document_number": data.get("id_no") or data.get("document_number") or "",
+                            "contact_no": data.get("mobile_no") or data.get("contact_no") or "",
+                            "nationality": data.get("nationality") or "",
+                            "document_type": data.get("document_type") or "Passport",
+                            "source": "OCR",
+                            "is_auto_filled": 1
                         })
                         successful_extractions += 1
             
@@ -203,8 +213,12 @@ class Trip(WebsiteGenerator):
             if data.get("name"):
                 self.append("passengers", {
                     "passenger_name": data.get("name"),
-                    "id_no": data.get("id_no", ""),
-                    "mobile_no": data.get("mobile_no", "")
+                    "document_number": data.get("id_no") or data.get("document_number") or "",
+                    "contact_no": data.get("mobile_no") or data.get("contact_no") or "",
+                    "nationality": data.get("nationality") or "",
+                    "document_type": data.get("document_type") or "Passport",
+                    "source": "OCR",
+                    "is_auto_filled": 1
                 })
                 
                 self.save(ignore_permissions=True)
@@ -248,14 +262,18 @@ class Trip(WebsiteGenerator):
                 # Store original values for learning
                 original_data = {
                     "name": passenger.passenger_name,
-                    "id_no": passenger.id_no,
-                    "mobile_no": passenger.mobile_no
+                    "document_number": passenger.document_number,
+                    "contact_no": passenger.contact_no,
+                    "nationality": passenger.nationality,
+                    "document_type": passenger.document_type
                 }
                 
                 # Update with verified data
                 passenger.passenger_name = verified_data.get("name", passenger.passenger_name)
-                passenger.id_no = verified_data.get("id_no", passenger.id_no)
-                passenger.mobile_no = verified_data.get("mobile_no", passenger.mobile_no)
+                passenger.document_number = verified_data.get("document_number") or verified_data.get("id_no") or passenger.document_number
+                passenger.contact_no = verified_data.get("contact_no") or verified_data.get("mobile_no") or passenger.contact_no
+                passenger.nationality = verified_data.get("nationality", passenger.nationality)
+                passenger.document_type = verified_data.get("document_type", passenger.document_type)
                 
                 # Learn from correction if values changed
                 if original_data != verified_data:

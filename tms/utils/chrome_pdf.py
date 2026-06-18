@@ -134,12 +134,19 @@ def get_pdf(html, options=None, output: PdfWriter | None = None):
             "--headless",
             "--disable-gpu",
             "--no-sandbox",
+            "--disable-web-security",
+            "--user-data-dir=/home/dg/.chrome-pdf-profile",
+            "--disable-dev-shm-usage",
             "--no-pdf-header-footer",
             "--run-all-compositor-stages-before-draw",
             f"--print-to-pdf={pdf_file_path}",
             html_file.name,
         ]
-        subprocess.run(chrome_command, shell=False)
+        env = os.environ.copy()
+        env["HOME"] = "/home/dg"
+        result = subprocess.run(chrome_command, shell=False, capture_output=True, text=True, env=env)
+        if result.returncode != 0:
+            raise Exception(f"Chrome PDF failed (exit code {result.returncode}): {result.stderr[:500]}")
         content = None
         with open(pdf_file_path, "rb") as f:
             content = f.read()

@@ -2,11 +2,12 @@
 # For license information, please see license.txt
 
 import json
-
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt, now_datetime, nowdate
+from frappe.model.naming import make_autoname
+from frappe.utils import flt, now_datetime, nowdate, getdate
+
 
 
 TAX_EXEMPT_CATEGORIES = {"Zero Rated", "Exempt", "Out of Scope"}
@@ -26,7 +27,7 @@ def calculate_item_amounts(item, vat_mode):
 		net = gross_or_net / (1 + (vat_rate / 100)) if vat_rate else gross_or_net
 		vat = gross_or_net - net
 		total = gross_or_net
-	elif vat_mode == "Manual Add VAT":
+	elif vat_mode in ("Excluded", "Manual VAT"):
 		net = gross_or_net
 		vat = net * vat_rate / 100
 		total = net + vat
@@ -47,10 +48,16 @@ def calculate_item_amounts(item, vat_mode):
 
 
 class TripInvoice(Document):
+	def autoname(self):
+		self.name = make_autoname("TINV-.YYYY.-.MM.-.####")
+
 	def validate(self):
 		self.set_defaults()
 		self.validate_unique_scope()
 		self.calculate_totals()
+
+	def on_update(self):
+		sync_trip_invoice_to_trip(self)
 
 	def set_defaults(self):
 		settings = get_trip_invoice_settings()
@@ -62,6 +69,8 @@ class TripInvoice(Document):
 		self.invoice_date = self.invoice_date or nowdate()
 		self.status = self.status or "Draft"
 		self.invoice_scope = self.invoice_scope or "Trip"
+		if self.vat_mode == "Manual VAT":
+			self.vat_mode = "Excluded"
 		self.resolve_vat_account()
 
 	def validate_unique_scope(self):
@@ -192,7 +201,15 @@ def get_passenger_mobile(row):
 
 
 def get_trip_passengers(trip):
-	return [row for row in trip.get("passengers") or [] if row.get("passenger_name") or row.get("id_no") or row.get("mobile_no")]
+	return [
+		row
+		for row in trip.get("passengers") or []
+		if row.get("passenger_name")
+		or row.get("document_number")
+		or row.get("contact_no")
+		or row.get("id_no")
+		or row.get("mobile_no")
+	]
 
 
 def get_uninvoiced_passengers(trip):
@@ -206,15 +223,33 @@ def get_per_passenger_value(trip):
 	return flt(trip.trip_value) / passenger_count
 
 
+def get_route_label(value, prefer_arabic=True):
+	parts = [part.strip() for part in str(value or "").split("|") if part and part.strip()]
+	if not parts:
+		return ""
+	if prefer_arabic and len(parts) > 1:
+		return parts[1]
+	return parts[0]
+
+
 def make_item_description(trip, passenger_name=None):
-	parts = [trip.name]
+	from_label = get_route_label(trip.from_location, prefer_arabic=True)
+	to_label = get_route_label(trip.to_location, prefer_arabic=True)
+	if from_label and to_label:
+		return f"{from_label}-إلى-{to_label}"
 	if trip.trip_route:
-		parts.append(str(trip.trip_route))
-	if trip.from_location or trip.to_location:
-		parts.append(f"{trip.from_location or ''} to {trip.to_location or ''}".strip())
-	if passenger_name:
-		parts.append(passenger_name)
-	return " | ".join([p for p in parts if p])
+		return str(trip.trip_route)
+	return _("خدمة نقل")
+
+
+def sync_trip_invoice_to_trip(invoice):
+	if not invoice.trip or (invoice.invoice_scope and invoice.invoice_scope != "Trip"):
+		return
+	if not frappe.db.exists("Trip", invoice.trip):
+		return
+
+	values = {"trip_invoice_created": 1, "trip_invoice": invoice.name}
+	frappe.db.set_value("Trip", invoice.trip, values, update_modified=False)
 
 
 def append_auto_trip_item(invoice, trip, settings, rate_override=None):
@@ -281,7 +316,7 @@ def make_trip_invoice_doc(trip, settings, passenger=None, invoice_scope="Trip", 
 	invoice.distance = flt(trip.distance)
 	invoice.trip_value = flt(rate_override if rate_override is not None else trip.trip_value)
 	invoice.billing_mode = trip.get("billing_mode") or "Route Amount"
-	invoice.vat_mode = trip.get("vat_mode") or "Included"
+	invoice.vat_mode = "Excluded" if trip.get("vat_mode") == "Manual VAT" else (trip.get("vat_mode") or "Included")
 	invoice.vat_rate = flt(trip.get("vat_rate") or settings.get("default_vat_rate") or 15)
 	invoice.vat_template = get_default_vat_template(invoice.company, settings)
 	invoice.vat_account = get_default_vat_account(invoice.company, settings)
@@ -387,7 +422,10 @@ def mark_trip_invoice_ready(trip_invoice):
 	doc.status = "Ready"
 	doc.kashf_ready = 1
 	doc.save()
-	return {"trip_invoice": doc.name, "status": doc.status, "kashf_ready": doc.kashf_ready}
+	doc.db_set("status", "Ready", update_modified=False)
+	doc.db_set("kashf_ready", 1, update_modified=False)
+	sync_trip_invoice_to_trip(doc)
+	return {"trip_invoice": doc.name, "status": "Ready", "kashf_ready": 1}
 
 
 @frappe.whitelist()
@@ -403,8 +441,126 @@ def mark_kashf_sent(trip_invoice):
 
 @frappe.whitelist()
 def create_sales_invoice_from_trip_invoice(name):
-	frappe.throw(_("Sales Invoice creation from Trip Invoice is planned for a later phase."))
+	doc = frappe.get_doc("Trip Invoice", name)
 
+	if doc.sales_invoice:
+		return {
+			"trip_invoice": doc.name,
+			"sales_invoice": doc.sales_invoice,
+		}
+
+	if not doc.get("items"):
+		frappe.throw(_("At least one item is required to create Sales Invoice."))
+
+	# Recalculate Trip Invoice totals before creating Sales Invoice
+	doc.calculate_totals()
+
+	settings = get_trip_invoice_settings()
+
+	sales_invoice = frappe.new_doc("Sales Invoice")
+
+	# -----------------------------
+	# Basic fields
+	# -----------------------------
+	sales_invoice.company = doc.company
+	sales_invoice.customer = doc.customer or settings.get("default_customer") or "Walking Customer"
+
+	# Important:
+	# Due Date must not be before Posting Date.
+	# So we force due_date = posting_date.
+	posting_date = getdate(doc.invoice_date or nowdate())
+	due_date = posting_date
+
+	sales_invoice.posting_date = posting_date
+	sales_invoice.due_date = due_date
+	sales_invoice.set_posting_time = 1
+
+	# Optional custom/payment fields if they exist in your system
+	if frappe.get_meta("Sales Invoice").has_field("custom_payment_means"):
+		sales_invoice.custom_payment_means = "Cash"
+
+	# -----------------------------
+	# Items
+	# -----------------------------
+	for row in doc.items:
+		item_code = row.item_code or settings.get("default_route_item") or settings.get("default_manual_item")
+
+		if not item_code:
+			frappe.throw(_("Default item is required before creating Sales Invoice."))
+
+		qty = flt(row.qty or 1)
+
+		if qty <= 0:
+			frappe.throw(_("Qty must be greater than zero for item {0}.").format(item_code))
+
+		# Very important:
+		# Trip Invoice row.amount is NET amount.
+		# If Trip Invoice total is 500 VAT included,
+		# row.amount should be around 434.78.
+		# Sales Invoice item rate must be NET rate, not gross rate.
+		net_rate = flt(row.amount) / qty
+
+		sales_invoice.append(
+			"items",
+			{
+				"item_code": item_code,
+				"item_name": row.item_name,
+				"description": row.description or row.item_name or item_code,
+				"qty": qty,
+				"uom": row.uom,
+				"rate": money(net_rate),
+				"income_account": row.income_account or settings.get("default_income_account"),
+				"cost_center": row.cost_center or settings.get("default_cost_center"),
+			},
+		)
+
+	# -----------------------------
+	# VAT / Taxes
+	# -----------------------------
+	vat_template = doc.vat_template or settings.get("default_vat_template")
+	vat_account = doc.vat_account or settings.get("default_vat_account") or get_default_vat_account(doc.company, settings)
+	
+
+	if vat_template:
+		if vat_template:
+			sales_invoice.taxes_and_charges = vat_template
+
+			sales_invoice.set("taxes", [])
+
+			sales_invoice.set_taxes()
+
+		elif vat_account:
+			sales_invoice.append(
+				"taxes",
+				{
+					"charge_type": "On Net Total",
+					"account_head": vat_account,
+					"description": "VAT {0}%".format(flt(doc.vat_rate or 15)),
+					"rate": flt(doc.vat_rate or 15),
+					"cost_center": settings.get("default_cost_center"),
+				},
+			)
+		else:
+			frappe.throw(_("VAT Template or VAT Account is required to create Sales Invoice with VAT."))	
+
+	# -----------------------------
+	# Save Sales Invoice as Draft
+	# -----------------------------
+	sales_invoice.insert(ignore_permissions=True)
+
+	# -----------------------------
+	# Update Trip Invoice
+	# -----------------------------
+	doc.db_set("sales_invoice", sales_invoice.name)
+	doc.db_set("status", "Sales Invoice Created")
+
+	return {
+		"trip_invoice": doc.name,
+		"sales_invoice": sales_invoice.name,
+		"net_total": sales_invoice.net_total,
+		"vat_amount": sales_invoice.total_taxes_and_charges,
+		"grand_total": sales_invoice.grand_total,
+	}
 
 @frappe.whitelist()
 def bulk_create_sales_invoices_from_trip_invoices(names):

@@ -16,6 +16,8 @@
   "default_vat_account",
   "default_income_account",
   "default_cost_center",
+  "driver_commission_expense_account",
+  "driver_commission_payable_account",
   "default_vat_rate",
   "create_missing_service_items",
   "create_missing_vat_account"
@@ -32,6 +34,8 @@
   {"default": "VAT 15% - CELTC", "fieldname": "default_vat_account", "fieldtype": "Link", "label": "Default VAT Account", "options": "Account"},
   {"fieldname": "default_income_account", "fieldtype": "Link", "label": "Default Income Account", "options": "Account"},
   {"fieldname": "default_cost_center", "fieldtype": "Link", "label": "Default Cost Center", "options": "Cost Center"},
+  {"fieldname": "driver_commission_expense_account", "fieldtype": "Link", "label": "Driver Commission Expense Account", "options": "Account"},
+  {"fieldname": "driver_commission_payable_account", "fieldtype": "Link", "label": "Driver Commission Payable Account", "options": "Account"},
   {"default": "15", "fieldname": "default_vat_rate", "fieldtype": "Percent", "label": "Default VAT Rate"},
   {"default": "0", "fieldname": "create_missing_service_items", "fieldtype": "Check", "label": "Create Missing Service Items"},
   {"default": "0", "fieldname": "create_missing_vat_account", "fieldtype": "Check", "label": "Create Missing VAT Account"}
