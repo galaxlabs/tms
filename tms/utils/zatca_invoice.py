@@ -73,7 +73,7 @@ def _build_tlv_value(tag: int, value: str) -> bytes:
 def build_zatca_qr_payload(doc) -> str:
     company = frappe.get_doc("Company", doc.company)
     seller_name = (
-        getattr(company, "company_name_arabic", None)
+        getattr(company, "custom_company_name_arabic", None) or getattr(company, "company_name_arabic", None)
         or getattr(company, "company_name", None)
         or getattr(doc, "company", "")
     )
