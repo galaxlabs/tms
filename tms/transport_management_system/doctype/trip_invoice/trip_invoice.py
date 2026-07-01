@@ -6,7 +6,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname
-from frappe.utils import flt, now_datetime, nowdate, getdate
+from frappe.utils import flt, now_datetime, nowdate, getdate, cint
 
 
 
@@ -213,7 +213,7 @@ def get_trip_passengers(trip):
 
 
 def get_uninvoiced_passengers(trip):
-	return [row for row in get_trip_passengers(trip) if not row.get("trip_invoice")]
+	return [row for row in get_trip_passengers(trip) if not cint(row.get("trip_invoice_created"))]
 
 
 def get_per_passenger_value(trip):
@@ -252,7 +252,7 @@ def sync_trip_invoice_to_trip(invoice):
 	frappe.db.set_value("Trip", invoice.trip, values, update_modified=False)
 
 
-def append_auto_trip_item(invoice, trip, settings, rate_override=None):
+def append_auto_trip_item(invoice, trip, settings, rate_override=None, qty_override=None):
 	billing_mode = trip.billing_mode or "Route Amount"
 	description = make_item_description(trip, invoice.invoice_passenger_name)
 	line_rate = flt(rate_override if rate_override is not None else trip.trip_value)
@@ -266,14 +266,16 @@ def append_auto_trip_item(invoice, trip, settings, rate_override=None):
 		"cost_center": settings.get("default_cost_center"),
 	}
 	if billing_mode == "Route Amount":
+		qty = cint(qty_override or 1) or 1
+		rate = line_rate / qty if qty > 0 else line_rate
 		invoice.append(
 			"items",
 			{
 				**common,
 				"item_code": settings.get("default_route_item"),
-				"qty": 1,
+				"qty": qty,
 				"uom": settings.get("default_uom_route"),
-				"rate": line_rate,
+				"rate": rate,
 			},
 		)
 	elif billing_mode == "KM Based":
@@ -322,12 +324,14 @@ def make_trip_invoice_doc(trip, settings, passenger=None, invoice_scope="Trip", 
 	invoice.vat_account = get_default_vat_account(invoice.company, settings)
 	invoice.tax_category = trip.get("tax_category")
 	invoice.invoice_date = nowdate()
-	invoice.status = "Draft"
+	invoice.status = "Ready"
+	invoice.kashf_ready = 1
 
 	if invoice_scope == "Trip" and passenger is None and allocated_count > 1:
 		invoice.invoice_passenger_name = trip.get("invoice_passenger_name") or _("Remaining {0} passengers").format(allocated_count)
 
-	append_auto_trip_item(invoice, trip, settings, rate_override=rate_override)
+	qty_override = allocated_count if invoice_scope == "Trip" and allocated_count > 1 else 1
+	append_auto_trip_item(invoice, trip, settings, rate_override=rate_override, qty_override=qty_override)
 	return invoice
 
 
@@ -343,7 +347,7 @@ def create_trip_invoice_from_trip(trip_name, invoice_mode="Trip", passenger_rows
 			if isinstance(passenger_rows, str):
 				passenger_rows = json.loads(passenger_rows)
 			passengers = [row for row in passengers if row.name in passenger_rows]
-		passengers = [row for row in passengers if not row.get("trip_invoice")]
+		passengers = [row for row in passengers if not cint(row.get("trip_invoice_created"))]
 		if not passengers:
 			frappe.throw(_("No uninvoiced passengers found for this Trip."))
 
@@ -359,7 +363,7 @@ def create_trip_invoice_from_trip(trip_name, invoice_mode="Trip", passenger_rows
 				rate_override=per_passenger_value,
 			)
 			invoice.insert()
-			frappe.db.set_value("Passengers", passenger.name, {"trip_invoice_created": 1, "trip_invoice": invoice.name})
+			frappe.db.set_value("Passengers", passenger.name, {"trip_invoice_created": 1}, update_modified=False)
 			created.append(invoice)
 		trip.db_set("trip_invoice_created", 1)
 		if len(created) == 1:
@@ -373,6 +377,9 @@ def create_trip_invoice_from_trip(trip_name, invoice_mode="Trip", passenger_rows
 			"kashf_ready": 0,
 			"can_print": 0,
 		}
+
+	if flt(trip.trip_value) <= 0:
+		frappe.throw(_("Route value is required before creating Trip Invoice."))
 
 	remaining_passengers = get_uninvoiced_passengers(trip)
 	existing_trip_scope = frappe.db.get_value("Trip Invoice", {"trip": trip.name, "invoice_scope": "Trip"}, "name")
@@ -396,7 +403,7 @@ def create_trip_invoice_from_trip(trip_name, invoice_mode="Trip", passenger_rows
 	invoice.insert()
 
 	for passenger in remaining_passengers:
-		frappe.db.set_value("Passengers", passenger.name, {"trip_invoice_created": 1, "trip_invoice": invoice.name})
+		frappe.db.set_value("Passengers", passenger.name, {"trip_invoice_created": 1}, update_modified=False)
 
 	trip.db_set("trip_invoice_created", 1)
 	trip.db_set("trip_invoice", invoice.name)
@@ -464,6 +471,8 @@ def create_sales_invoice_from_trip_invoice(name):
 	# -----------------------------
 	sales_invoice.company = doc.company
 	sales_invoice.customer = doc.customer or settings.get("default_customer") or "Walking Customer"
+	if sales_invoice.meta.has_field("customer_name_text"):
+		sales_invoice.customer_name_text = doc.get("customer_name_text") or doc.get("invoice_passenger_name") or ""
 
 	# Important:
 	# Due Date must not be before Posting Date.

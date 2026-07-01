@@ -16,6 +16,15 @@ frappe.ui.form.on("Delivery Note", {
 frappe.ui.form.on("Purchase Invoice", {
     refresh: add_pdf_button
 });
+frappe.ui.form.on("Purchase Order", {
+    refresh: add_pdf_button
+});
+frappe.ui.form.on("Supplier Quotation", {
+    refresh: add_pdf_button
+});
+frappe.ui.form.on("Payment Entry", {
+    refresh: add_pdf_button
+});
 
 function add_pdf_button(frm) {
     // Show for all saved docs (draft, submitted, cancelled)

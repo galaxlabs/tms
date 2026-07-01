@@ -43,6 +43,14 @@ class Trip(WebsiteGenerator):
         if len(invoice_customers) > 1:
             frappe.throw("Only one passenger can be selected as invoice customer.")
 
+        selected_customer = invoice_customers[0] if invoice_customers else None
+        self.invoice_passenger_name = (selected_customer.get("passenger_name") if selected_customer else "") or ""
+        self.invoice_passenger_mobile = (
+            (selected_customer.get("contact_no") or selected_customer.get("mobile_no"))
+            if selected_customer
+            else ""
+        ) or ""
+
         self.driver_commission_amount = flt(self.trip_value) * flt(self.driver_commission_rate) / 100
 
         if self.departure and self.duration_minutes:

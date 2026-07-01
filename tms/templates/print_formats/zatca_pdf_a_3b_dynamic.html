@@ -24,11 +24,11 @@
 {% set company_website = company.website or "www.celtco.org" %}
 {% set company_vat = doc.company_tax_id or company.tax_id or "312449289400003" %}
 {% set company_cr = company.registration_details or "-" %}
-{% set customer_doc = frappe.get_doc("Customer", doc.customer) %}
+{% set customer_doc = frappe.get_doc("Customer", doc.customer) if doc.customer and frappe.db.exists("Customer", doc.customer) else None %}
 {% set company_ar = company.get("custom_company_name_arabic") or company.get("company_name_arabic") or company.company_name %}
 {% set fallback_logo = frappe.db.get_value("File", {"file_name": "Celtco Logo.png"}, "file_url") or frappe.db.get_value("File", {"file_name": "Logo.png"}, "file_url") or frappe.db.get_value("File", {"file_name": "Logo.jpeg"}, "file_url") %}
 {% set company_logo = company.get("company_logo") or fallback_logo or "/files/Celtco%20Logo.png" %}
-{% set customer_ar = customer_doc.get("customer_name_in_arabic") or doc.get("customer_name_in_arabic") or doc.customer_name %}
+{% set customer_ar = customer_doc.get("customer_name_in_arabic") or doc.get("customer_name_in_arabic") or doc.get("customer_name_text") or doc.customer_name %}
 {% set brand = company.custom_invoice_brand_color or "#0f766e" %}
 {% set variant = company.custom_invoice_style_variant or "Classic" %}
 {% set company_addr = frappe.get_doc("Address", doc.company_address) if doc.company_address else None %}
@@ -820,10 +820,10 @@ body .print-format .brand-logo-cell img.brand-logo {
         <td class="party-column">
           <div class="party-card">
             <div class="party-title"><strong>Buyer</strong><span>العميل</span></div>
-            <div class="party-name">{{ doc.customer_name }}</div>
+            <div class="party-name">{{ doc.get("customer_name_text") or doc.customer_name }}</div>
             <div class="party-name-ar">{{ customer_ar }}</div>
             <table class="party-rows">
-              <tr><td>Name</td><td>{{ doc.customer_name }}</td><td>الاسم</td></tr>
+              <tr><td>Name</td><td>{{ doc.get("customer_name_text") or doc.customer_name }}</td><td>الاسم</td></tr>
               <tr><td>VAT Number</td><td>{{ doc.tax_id or customer_doc.get("tax_id") or "-" }}</td><td>الرقم الضريبي</td></tr>
               <tr><td>CR Number</td><td>{{ customer_doc.get("cr") or customer_doc.get("registration_number") or "-" }}</td><td>السجل التجاري</td></tr>
               <tr><td>Building No</td><td>{{ (customer_addr.get("address_title") if customer_addr else "") or "-" }}</td><td>رقم المبنى</td></tr>

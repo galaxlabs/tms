@@ -44,8 +44,15 @@ app_include_js = "/assets/tms/js/pdf_generator.js"
 
 # include js in doctype views
 doctype_js = {
-    "Sales Invoice": "public/js/sales_invoice_whatsapp.js",
+    "Sales Invoice": ["public/js/pdf_generator.js", "public/js/sales_invoice_whatsapp.js"],
     "Trip": "public/js/trip_whatsapp.js",
+    "Quotation": "public/js/pdf_generator.js",
+    "Sales Order": "public/js/pdf_generator.js",
+    "Delivery Note": "public/js/pdf_generator.js",
+    "Purchase Invoice": "public/js/pdf_generator.js",
+    "Purchase Order": "public/js/pdf_generator.js",
+    "Supplier Quotation": "public/js/pdf_generator.js",
+    "Payment Entry": "public/js/pdf_generator.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -353,10 +360,4 @@ doc_events = {
         }
         
 }
-doctype_js = {
-    "Quotation": "public/js/pdf_generator.js",
-    "Sales Invoice": "public/js/pdf_generator.js",
-    "Sales Order": "public/js/pdf_generator.js",
-    "Delivery Note": "public/js/pdf_generator.js",
-    "Purchase Invoice": "public/js/pdf_generator.js",
-}
+
