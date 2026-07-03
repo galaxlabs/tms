@@ -81,7 +81,10 @@ def build_zatca_qr_payload(doc) -> str:
     posting_timestamp = frappe.utils.get_datetime(
         f"{getattr(doc, 'posting_date', '')} {getattr(doc, 'posting_time', '')}"
     ).isoformat()
-    total_amount = f"{float(getattr(doc, 'grand_total', 0) or 0):.2f}"
+    if doc.get("apply_retention") and doc.get("net_payable_after_retention"):
+        total_amount = f"{float(doc.net_payable_after_retention):.2f}"
+    else:
+        total_amount = f"{float(doc.grand_total or 0):.2f}" 
     vat_amount = f"{float(getattr(doc, 'total_taxes_and_charges', 0) or 0):.2f}"
 
     payload = b"".join(
